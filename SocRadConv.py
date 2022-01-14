@@ -20,6 +20,7 @@ import pathlib
 import pickle as pkl
 import json
 import glob, re, os
+import time as timer
 
 try:
     import phys
@@ -80,7 +81,8 @@ def RadConvEqm(dirs, time, atm, loop_counter, COUPLER_options, standalone, cp_dr
 
     # Plot
     if standalone == True:
-        plot_flux_balance(atm_dry, atm_moist, cp_dry, time, dirs)
+        # Commented just to run it on slurm
+        #plot_flux_balance(atm_dry, atm_moist, atm_moist_timestep, cp_dry, moist_timestep, time, dirs)
         # Save to disk
         with open(dirs["output"]+"/"+str(int(time["planet"]))+"_atm.pkl", "wb") as atm_file: 
             pkl.dump(atm_moist, atm_file, protocol=pkl.HIGHEST_PROTOCOL)
@@ -155,24 +157,29 @@ def DryAdj_old(atm):
 # Dry convective adjustment - returns the tendency: good. Also conserves dry enthalpy.
 def DryAdj(atm, itermax):
 
-    Tl    = atm.tmpl
-    pl    = atm.pl
-    pe    = atm.p
+    #print('BADGER0dryadj')
+    # Here 'l' designates layers and length 100, and 'e' designates edges and length 101. It's the opposite elsewhere...
+    Tl    = atm.tmp 
+    pe    = atm.pl
+    pl    = atm.p
     Tl_cc = Tl
-    nlay  = len(Tl_cc)
+    nlay    = len(Tl_cc)
 
     d_p   = np.ones(len(pl))
 
     small = 1.0e-6
 
-    for i in range(1, nlay+1):
+    #print('BADGER1dryadj')
+    for i in range(nlay):
         d_p[i] = pe[i+1] - pe[i]
 
-    for iteration in range(1, itermax+1):
+    #print('BADGER2dryadj')
+    for iteration in range(itermax):
         did_adj = False
 
         # Downward pass
-        for i in range(1, nlay): # from layer 1 to layer nlay-1
+        for i in range(nlay-2): # from layer 0 to layer nlay-2
+            #print('BADGER3dryadj')
 
             pfact = (pl[i]/pl[i+1])**atm.Rcp
             if (Tl_cc[i] < (Tl_cc[i+1]*pfact - small)):
@@ -180,16 +187,18 @@ def DryAdj(atm, itermax):
                 Tl_cc[i+1] = (d_p[i] + d_p[i+1])*Tbar / (d_p[i+1]+pfact*d_p[i])
                 Tl_cc[i] = Tl_cc[i+1] * pfact
                 did_adj = True
+                #print('BADGER4dryadj')
 
         # Upward pass
-        for i in range(nlay-1, 0, -1): # from layer nlay-1 to layer 1
-
+        for i in range(nlay-2, -1, -1): # from layer nlay-2 to layer 0
+            #print('BADGER5dryadj')
             pfact = (pl[i]/pl[i+1])**atm.Rcp
             if (Tl_cc[i] < (Tl_cc[i+1]*pfact - small)):
                 Tbar = (d_p[i]*Tl_cc[i] + d_p[i+1]*Tl_cc[i+1]) / (d_p[i] + d_p[i+1])
                 Tl_cc[i+1] = (d_p[i] + d_p[i+1])*Tbar / (d_p[i+1]+pfact*d_p[i])
                 Tl_cc[i] = Tl_cc[i+1] * pfact
                 did_adj = True
+                #print('BADGER6dryadj')
 
         # If no adjustment required, exit the loop
         if (did_adj == False):
@@ -215,9 +224,10 @@ def DryAdj(atm, itermax):
 
 def MoistAdj(atm, itermax):
 
-    Tl    = atm.tmpl
-    pl    = atm.pl
-    pe    = atm.p
+    #print('BADGER0moistadj')
+    Tl    = atm.tmp
+    pl    = atm.p
+    pe    = atm.pl
     Tl_cc = Tl
     Tl_cc_H2O = Tl
     Tl_cc_CH4 = Tl
@@ -231,128 +241,134 @@ def MoistAdj(atm, itermax):
 
     nlay  = len(Tl_cc)
 
-    for iteration in range(1, itermax+1):
+    #print('BADGER1moistadj')
+    for iteration in range(itermax):
         did_adj = False
         #------------------- H2O -------------------
         #Downward pass
-        for i in range(1, nlay+1): # from layer 1 to layer nlay
+        #print('BADGER2moistadj')
+        for i in range(nlay): # from layer 0 to layer nlay-1
             if (Tl_cc[i] < ga.Tdew('H2O', pl[i])):
                 Tl_cc_H2O[i] = ga.Tdew('H2O', pl[i]) # temperature stays the same during the phase change
                 did_adj = True
-        
+                #print('BADGER3moistadj')
+
         # Upward pass
-        for i in range(nlay, 0, -1): # from layer nlay to layer 1
+        for i in range(nlay-1, -1, -1): # from layer nlay-1 to layer 0
             if (Tl_cc[i] < ga.Tdew('H2O', pl[i])):
                 Tl_cc_H2O[i] = ga.Tdew('H2O', pl[i])
                 did_adj = True
+                #print('BADGER4moistadj')
 
         #------------------- CH4 -------------------
         #Downward pass
-        for i in range(1, nlay+1): # from layer 1 to layer nlay
+        for i in range(nlay): 
             if (Tl_cc[i] < ga.Tdew('CH4', pl[i])):
-                Tl_cc_CH4[i] = ga.Tdew('CH4', pl[i]) # temperature stays the same during the phase change
+                Tl_cc_CH4[i] = ga.Tdew('CH4', pl[i]) 
                 did_adj = True
 
         # Upward pass
-        for i in range(nlay, 0, -1): # from layer nlay to layer 1
+        for i in range(nlay-1, -1, -1): 
             if (Tl_cc[i] < ga.Tdew('CH4', pl[i])):
                 Tl_cc_CH4[i] = ga.Tdew('CH4', pl[i])
                 did_adj = True
 
         #------------------- CO2 -------------------
         #Downward pass
-        for i in range(1, nlay+1): # from layer 1 to layer nlay
+        for i in range(nlay): 
             if (Tl_cc[i] < ga.Tdew('CO2', pl[i])):
-                Tl_cc_CO2[i] = ga.Tdew('CO2', pl[i]) # temperature stays the same during the phase change
+                Tl_cc_CO2[i] = ga.Tdew('CO2', pl[i]) 
                 did_adj = True
 
         # Upward pass
-        for i in range(nlay, 0, -1): # from layer nlay to layer 1
+        for i in range(nlay-1, -1, -1): 
             if (Tl_cc[i] < ga.Tdew('CO2', pl[i])):
                 Tl_cc_CO2[i] = ga.Tdew('CO2', pl[i])
                 did_adj = True
 
         #------------------- CO --------------------
         #Downward pass
-        for i in range(1, nlay+1): # from layer 1 to layer nlay
+        for i in range(nlay): 
             if (Tl_cc[i] < ga.Tdew('CO', pl[i])):
-                Tl_cc_CO[i] = ga.Tdew('CO', pl[i]) # temperature stays the same during the phase change
+                Tl_cc_CO[i] = ga.Tdew('CO', pl[i]) 
                 did_adj = True
 
         # Upward pass
-        for i in range(nlay, 0, -1): # from layer nlay to layer 1
+        for i in range(nlay-1, -1, -1): 
             if (Tl_cc[i] < ga.Tdew('CO', pl[i])):
                 Tl_cc_CO[i] = ga.Tdew('CO', pl[i])
                 did_adj = True
 
         #------------------- N2 --------------------
         #Downward pass
-        for i in range(1, nlay+1): # from layer 1 to layer nlay
+        for i in range(nlay): 
             if (Tl_cc[i] < ga.Tdew('N2', pl[i])):
-                Tl_cc_N2[i] = ga.Tdew('N2', pl[i]) # temperature stays the same during the phase change
+                Tl_cc_N2[i] = ga.Tdew('N2', pl[i]) 
                 did_adj = True
 
         # Upward pass
-        for i in range(nlay, 0, -1): # from layer nlay to layer 1
+        for i in range(nlay-1, -1, -1): 
             if (Tl_cc[i] < ga.Tdew('N2', pl[i])):
                 Tl_cc_N2[i] = ga.Tdew('N2', pl[i])
                 did_adj = True
 
         #------------------- O2 --------------------
         #Downward pass
-        for i in range(1, nlay+1): # from layer 1 to layer nlay
+        for i in range(nlay): 
             if (Tl_cc[i] < ga.Tdew('O2', pl[i])):
-                Tl_cc_O2[i] = ga.Tdew('O2', pl[i]) # temperature stays the same during the phase change
+                Tl_cc_O2[i] = ga.Tdew('O2', pl[i]) 
                 did_adj = True
 
         # Upward pass
-        for i in range(nlay, 0, -1): # from layer nlay to layer 1
+        for i in range(nlay-1, -1, -1): 
             if (Tl_cc[i] < ga.Tdew('O2', pl[i])):
                 Tl_cc_O2[i] = ga.Tdew('O2', pl[i])
                 did_adj = True
 
         #------------------- H2 --------------------
         #Downward pass
-        for i in range(1, nlay+1): # from layer 1 to layer nlay
+        for i in range(nlay): 
             if (Tl_cc[i] < ga.Tdew('H2', pl[i])):
-                Tl_cc_H2[i] = ga.Tdew('H2', pl[i]) # temperature stays the same during the phase change
+                Tl_cc_H2[i] = ga.Tdew('H2', pl[i]) 
                 did_adj = True
 
         # Upward pass
-        for i in range(nlay, 0, -1): # from layer nlay to layer 1
+        for i in range(nlay-1, -1, -1): 
             if (Tl_cc[i] < ga.Tdew('H2', pl[i])):
                 Tl_cc_H2[i] = ga.Tdew('H2', pl[i])
                 did_adj = True
 
         #------------------- He --------------------
         #Downward pass
-        for i in range(1, nlay+1): # from layer 1 to layer nlay
+        for i in range(nlay): 
             if (Tl_cc[i] < ga.Tdew('He', pl[i])):
-                Tl_cc_He[i] = ga.Tdew('He', pl[i]) # temperature stays the same during the phase change
+                Tl_cc_He[i] = ga.Tdew('He', pl[i]) 
                 did_adj = True
 
         # Upward pass
-        for i in range(nlay, 0, -1): # from layer nlay to layer 1
+        for i in range(nlay-1, -1, -1): 
             if (Tl_cc[i] < ga.Tdew('He', pl[i])):
                 Tl_cc_He[i] = ga.Tdew('He', pl[i])
                 did_adj = True
 
         #------------------- NH3 -------------------
         #Downward pass
-        for i in range(1, nlay+1): # from layer 1 to layer nlay
+        for i in range(nlay): 
             if (Tl_cc[i] < ga.Tdew('NH3', pl[i])):
-                Tl_cc_NH3[i] = ga.Tdew('NH3', pl[i]) # temperature stays the same during the phase change
+                Tl_cc_NH3[i] = ga.Tdew('NH3', pl[i]) 
                 did_adj = True
 
         # Upward pass
-        for i in range(nlay, 0, -1): # from layer nlay to layer 1
+        for i in range(nlay-1, -1, -1): 
             if (Tl_cc[i] < ga.Tdew('NH3', pl[i])):
                 Tl_cc_NH3[i] = ga.Tdew('NH3', pl[i])
                 did_adj = True
 
+        #print('BADGER5moistadj')
         #----------------- Minimum -----------------
-        for i in range(1, nlay+1): # from layer 1 to layer nlay
+        for i in range(nlay): 
             Tl_cc[i] = np.min([Tl_cc_H2O[i], Tl_cc_CH4[i], Tl_cc_CO2[i], Tl_cc_CO[i], Tl_cc_N2[i], Tl_cc_O2[i], Tl_cc_H2[i], Tl_cc_He[i], Tl_cc_NH3[i]])
+            #print('BADGER6moistadj')
 
         # If no adjustment required, exit the loop
         if (did_adj == False):
@@ -363,7 +379,7 @@ def MoistAdj(atm, itermax):
     return dT_conv_moist
 
 
-def plot_flux_balance(atm_dry, atm_moist, cp_dry, time, dirs):
+def plot_flux_balance(atm_dry, atm_moist, atm_moist_timestep, cp_dry, moist_timestep, time, dirs):
 
     fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(13,10))
     # sns.set_style("ticks")
@@ -379,6 +395,7 @@ def plot_flux_balance(atm_dry, atm_moist, cp_dry, time, dirs):
     # Temperature vs. pressure
     ax1.semilogy(atm_moist.tmp,atm_moist.p, color=ga.vol_colors[col_vol1][col_idx+1], ls="-", label=r'Moist adiabat')
     if cp_dry == True: ax1.semilogy(atm_dry.tmp,atm_dry.p, color=ga.vol_colors[col_vol3][col_idx+1], ls="-", label=r'Dry adiabat')
+    if moist_timestep == True: ax1.semilogy(atm_moist_timestep.tmp,atm_moist_timestep.p, color=ga.vol_colors[col_vol4][col_idx+1], ls="-", label=r'Timestepped moist adiabat')
     ax1.legend()
     ax1.invert_yaxis()
     ax1.set_xlabel(r'Temperature $T$ (K)')
@@ -403,29 +420,33 @@ def plot_flux_balance(atm_dry, atm_moist, cp_dry, time, dirs):
 
     # SW down / instellation flux
     if cp_dry == True: ax2.semilogy(atm_dry.SW_flux_down*(-1),atm_dry.pl, color=ga.vol_colors[col_vol3][col_idx], ls=":")
+    if moist_timestep == True: ax2.semilogy(atm_moist_timestep.SW_flux_down*(-1),atm_moist_timestep.pl, color=ga.vol_colors[col_vol4][col_idx], ls=":")
     ax2.semilogy(atm_moist.SW_flux_down*(-1),atm_moist.pl, color=ga.vol_colors[col_vol2][col_idx], ls=":", label=r'$F_{\odot}^{\downarrow}$')
 
     # LW down / thermal downward flux
     if cp_dry == True: ax2.semilogy(atm_dry.LW_flux_down*(-1),atm_dry.pl, color=ga.vol_colors[col_vol3][col_idx], ls="--")
+    if moist_timestep == True: ax2.semilogy(atm_moist_timestep.LW_flux_down*(-1),atm_moist_timestep.pl, color=ga.vol_colors[col_vol4][col_idx], ls="--")
     ax2.semilogy(atm_moist.LW_flux_down*(-1),atm_moist.pl, color=ga.vol_colors[col_vol2][col_idx+1], ls="--", label=r'$F_\mathrm{t}^{\downarrow}$')
     # ls=(0, (3, 1, 1, 1))
-    
+
     # Thermal upward flux, total
     if cp_dry == True: ax2.semilogy(atm_dry.flux_up_total,atm_dry.pl, color=ga.vol_colors[col_vol3][col_idx], ls="--")
+    if moist_timestep == True: ax2.semilogy(atm_moist_timestep.flux_up_total,atm_moist_timestep.pl, color=ga.vol_colors[col_vol4][col_idx], ls="--")
     ax2.semilogy(atm_moist.flux_up_total,atm_moist.pl, color=ga.vol_colors[col_vol1][col_idx], ls="--", label=r'$F_\mathrm{t}^{\uparrow}$')
 
     # Net flux
     if cp_dry == True: ax2.semilogy(atm_dry.net_flux,atm_dry.pl, color=ga.vol_colors[col_vol3][6], ls="-", lw=2)
+    if moist_timestep == True: ax2.semilogy(atm_moist_timestep.net_flux,atm_moist_timestep.pl, color=ga.vol_colors[col_vol4][6], ls="-", lw=2)
     ax2.semilogy(atm_moist.net_flux,atm_moist.pl, color=ga.vol_colors[col_vol1][6], ls="-", lw=2, label=r'$F_\mathrm{net}^{\uparrow}$')
 
     # # SW up
     # if cp_dry == True: ax2.semilogy(atm_dry.SW_flux_up,atm_dry.pl, color=ga.vol_colors[col_vol3][col_idx], ls=":")
     # ax2.semilogy(atm_moist.SW_flux_up,atm_moist.pl, color=ga.vol_colors[col_vol1][col_idx], ls=":", label=r'$F_\mathrm{SW}^{\uparrow}$')
-    
+
     # # LW up
     # if cp_dry == True: ax2.semilogy(atm_dry.LW_flux_up,atm_dry.pl, color=ga.vol_colors[col_vol3][col_idx], ls=(0, (5, 1)))
     # ax2.semilogy(atm_moist.LW_flux_up,atm_moist.pl, color=ga.vol_colors[col_vol1][col_idx], ls=(0, (5, 1)), label=r'$F_\mathrm{LW}^{\uparrow}$')
-    
+
     ax2.legend(ncol=6, fontsize=10, loc=3)
     ax2.invert_yaxis()
     ax2.set_xscale("symlog") # https://stackoverflow.com/questions/3305865/what-is-the-difference-between-log-and-symlog
@@ -436,6 +457,7 @@ def plot_flux_balance(atm_dry, atm_moist, cp_dry, time, dirs):
     # Wavenumber vs. OLR
     ax3.plot(atm_moist.band_centres, surf_Planck_nu(atm_moist)/atm_moist.band_widths, color="gray",ls='--',label=str(round(atm_moist.ts))+' K blackbody')
     if cp_dry == True: ax3.plot(atm_dry.band_centres, atm_dry.net_spectral_flux[:,0]/atm_dry.band_widths, color=ga.vol_colors[col_vol3][col_idx])
+    if moist_timestep == True: ax3.plot(atm_moist_timestep.band_centres, atm_moist_timestep.net_spectral_flux[:,0]/atm_moist_timestep.band_widths, color=ga.vol_colors[col_vol4][col_idx])
     ax3.plot(atm_moist.band_centres, atm_moist.net_spectral_flux[:,0]/atm_moist.band_widths, color=ga.vol_colors[col_vol1][col_idx+1])
     ax3.set_ylabel(r'Spectral flux density (W m$^{-2}$ cm$^{-1}$)')
     ax3.set_xlabel(r'Wavenumber (cm$^{-1}$)')
@@ -444,15 +466,20 @@ def plot_flux_balance(atm_dry, atm_moist, cp_dry, time, dirs):
     ax3.set_ylim(bottom=0, top=ymax_plot)
     ax3.set_xlim(left=0, right=np.max(np.where(atm_moist.net_spectral_flux[:,0]/atm_moist.band_widths > ymax_plot/1000., atm_moist.band_centres, 0.)))
     # ax3.set_xlim(left=0, right=30000)
-    
+
 
     # Heating versus pressure
     ax4.axvline(0, color=ga.vol_colors["qgray_light"], lw=0.5)
 
-    if cp_dry == True: 
+    if cp_dry == True:
         ax4.plot(atm_dry.LW_heating, atm_dry.p, ls="--", color=ga.vol_colors[col_vol3][col_idx+1])
         ax4.plot(atm_dry.net_heating, atm_dry.p, lw=2, color=ga.vol_colors[col_vol3][col_idx+1])
         ax4.plot(atm_dry.SW_heating, atm_dry.p, ls=":", color=ga.vol_colors[col_vol3][col_idx+1])
+
+    if moist_timestep == True:
+        ax4.plot(atm_moist_timestep.LW_heating, atm_moist_timestep.p, ls="--", color=ga.vol_colors[col_vol4][col_idx+1])
+        ax4.plot(atm_moist_timestep.net_heating, atm_moist_timestep.p, lw=2, color=ga.vol_colors[col_vol4][col_idx+1])
+        ax4.plot(atm_moist_timestep.SW_heating, atm_moist_timestep.p, ls=":", color=ga.vol_colors[col_vol4][col_idx+1])
 
     ax4.plot(atm_moist.LW_heating, atm_moist.p, ls="--", color=ga.vol_colors[col_vol1][col_idx+1], label=r'LW')
     ax4.plot(atm_moist.net_heating, atm_moist.p, lw=2, color=ga.vol_colors[col_vol1][col_idx+1], label=r'Net')
@@ -462,13 +489,13 @@ def plot_flux_balance(atm_dry, atm_moist, cp_dry, time, dirs):
     trpp_idx = int(atm_moist.trpp[0])
     if trpp_idx > 0:
         ax4.axhline(atm_moist.pl[trpp_idx], color=ga.vol_colors[col_vol2][col_idx], lw=1.0, ls="-.", label=r'Tropopause')
-    
+
     ax4.invert_yaxis()
     ax4.legend(ncol=4, fontsize=10, loc=3)
     ax4.set_ylabel(r'Pressure $P$ (Pa)')
     ax4.set_xlabel(r'Heating (K/day)')
     # ax4.set_xscale("log")
-    ax4.set_yscale("log") 
+    ax4.set_yscale("log")
     x_minmax = np.max([abs(np.min(atm_moist.net_heating[10:])), abs(np.max(atm_moist.net_heating[10:]))])
     x_minmax = np.max([ 20, x_minmax ])
     if not math.isnan(x_minmax):
@@ -477,22 +504,22 @@ def plot_flux_balance(atm_dry, atm_moist, cp_dry, time, dirs):
     # ax4.set_yticks([1e-10, 1e-5, 1e0, 1e5])
     # ax4.set_xticks([0.1, 0.3, 1, 3, 10, 30, 100])
     # ax4.set_xticklabels(["0.1", "0.3", "1", "3", "10", "30", "100"])
-    
+
     # # Wavelength versus OLR log plot
     # OLR_cm_moist = atm_moist.LW_spectral_flux_up[:,0]/atm_moist.band_widths
     # wavelength_moist  = [ 1e+4/i for i in atm_moist.band_centres ]          # microns
     # OLR_micron_moist  = [ 1e+4*i for i in OLR_cm_moist ]                    # microns
-    # if cp_dry == True: 
+    # if cp_dry == True:
     #     OLR_cm_dry = atm_dry.LW_spectral_flux_up[:,0]/atm_dry.band_widths
     #     wavelength_dry  = [ 1e+4/i for i in atm_dry.band_centres ]              # microns
     #     OLR_micron_dry  = [ 1e+4*i for i in OLR_cm_dry ]                        # microns
     #     ax4.plot(wavelength_dry, OLR_micron_dry, color=ga.vol_colors[col_vol3][col_idx+1])
-    
+
     # ax4.plot(wavelength_moist, OLR_micron_moist, color=ga.vol_colors[col_vol1][col_idx+1])
     # ax4.set_ylabel(r'Spectral flux density (W m$^{-2}$ $\mu$m$^{-1}$)')
     # ax4.set_xlabel(r'Wavelength $\lambda$ ($\mu$m)')
     # ax4.set_xscale("log")
-    # ax4.set_yscale("log") 
+    # ax4.set_yscale("log")
     # ax4.set_xlim(left=0.1, right=100)
     # ax4.set_ylim(bottom=1e-20, top=1e5)
     # # ax4.set_yticks([1e-10, 1e-5, 1e0, 1e5])
@@ -502,7 +529,7 @@ def plot_flux_balance(atm_dry, atm_moist, cp_dry, time, dirs):
     plt.savefig(dirs["output"]+"/"+"TP_"+str(round(time["planet"]))+'.pdf', bbox_inches="tight")
     plt.close(fig)
 
-    # with open(dirs["output"]+"/"+str(int(time["planet"]))+"_atm.pkl", "wb") as atm_file: 
+    # with open(dirs["output"]+"/"+str(int(time["planet"]))+"_atm.pkl", "wb") as atm_file:
     #     pkl.dump(atm, atm_file, protocol=pkl.HIGHEST_PROTOCOL)
 
     # # Save atm object to .json file
@@ -510,11 +537,13 @@ def plot_flux_balance(atm_dry, atm_moist, cp_dry, time, dirs):
     # with open(dirs["output"]+"/"+str(int(time_current))+"_atm.json", "wb") as atm_file:
     #     json.dump(json_atm, atm_file)
 
+
+
 # Time integration for n steps
 def compute_dry_adiabat(atm, dirs, standalone, rscatter):
 
     # Dry adiabat settings 
-    rad_steps   = 1000  # Maximum number of radiation steps
+    rad_steps   = 10  # Maximum number of radiation steps
     conv_steps  = 30   # Number of convective adjustment steps (per radiation step)
     dT_max      = 20.  # K, Maximum temperature change per radiation step
     T_floor     = 10.  # K, Temperature floor to prevent SOCRATES crash
@@ -530,70 +559,79 @@ def compute_dry_adiabat(atm, dirs, standalone, rscatter):
     PrevMaxHeat_dry     = 0.
     PrevTemp_dry        = atm.tmp * 0.
 
+    # Initialize surface temperature tendency
+    cp_surf               = 1.e6
+    ts_dt                 = 0.
+
     # Time stepping
     for i in range(0, rad_steps):
 
         # atm.toa_heating = 0
 
         # Compute radiation, midpoint method time stepping
-        try:
-            atm_dry         = SocRadModel.radCompSoc(atm_dry, dirs, recalc=False, calc_cf=False, rscatter=rscatter)
+        #try:
+        atm_dry         = SocRadModel.radCompSoc(atm_dry, dirs, recalc=False, calc_cf=False, rscatter=rscatter)
             
-            dT_dry          = atm_dry.net_heating * atm_dry.dt
+        dT_dry          = atm_dry.net_heating * atm_dry.dt
 
-            # Dry convective adjustment
-            dT_conv_dry  = DryAdj(atm_dry, conv_steps)
-            # Apply temperature tendency due to dry convection
-            dT_dry += dT_conv_dry
+        # Dry convective adjustment
+        dT_conv_dry  = DryAdj(atm_dry, conv_steps)
+        # Apply temperature tendency due to dry convection
+        dT_dry += dT_conv_dry
 
-            # Limit the temperature change per step
-            dT_dry          = np.where(dT_dry > dT_max, dT_max, dT_dry)
-            dT_dry          = np.where(dT_dry < -dT_max, -dT_max, dT_dry)
+        # Limit the temperature change per step
+        dT_dry          = np.where(dT_dry > dT_max, dT_max, dT_dry)
+        dT_dry          = np.where(dT_dry < -dT_max, -dT_max, dT_dry)
 
-            # Apply heating
-            atm_dry.tmp     += dT_dry
+        # Apply heating
+        atm_dry.tmp     += atm_dry.dt*dT_dry
 
-            # # Do the surface balance
-            # kturb       = .1
-            # atm.tmp[-1] += -atm.dt * kturb * (atm.tmp[-1] - atm.ts)
-            
-            # Dry convective adjustment (old, changed tmp directly)
-            #for iadj in range(conv_steps):
-                #atm_dry     = DryAdj(atm_dry)
+        # Net surface flux (for surface temperature evolution)
+        net_Fs = - atm_dry.net_flux[-1] # We have to define positive as downward (heating) and cooling (upward) in this case
+        ts_dt += net_Fs / cp_surf
+        atm_dry.ts += atm_dry.dt*ts_dt
 
-            # Temperature floor to prevent SOCRATES crash
-            if np.min(atm_dry.tmp) < T_floor:
-                atm_dry.tmp = np.where(atm_dry.tmp < T_floor, T_floor, atm_dry.tmp)
+        # Do the surface balance
+        kturb       = .1
+        atm_dry.tmp[-1] += -atm_dry.dt * kturb * (atm_dry.tmp[-1] - atm_dry.ts)
 
-            # Convergence criteria
-            dTglobal_dry    = abs(round(np.max(atm_dry.tmp-PrevTemp_dry[:]), 4))
-            dTtop_dry       = abs(round(atm_dry.tmp[0]-atm_dry.tmp[1], 4))
+        # Dry convective adjustment (old, changed tmp directly)
+        #for iadj in range(conv_steps):
+            #atm_dry     = DryAdj(atm_dry)
 
-            # Break criteria
-            dOLR_dry        = abs(round(atm_dry.LW_flux_up[0]-PrevOLR_dry, 6))
-            dbreak_dry      = (0.01*(5.67e-8*atm_dry.ts**4)**0.5)
+        # Temperature floor to prevent SOCRATES crash
+        if np.min(atm_dry.tmp) < T_floor:
+            atm_dry.tmp = np.where(atm_dry.tmp < T_floor, T_floor, atm_dry.tmp)
 
-            # Inform during runtime
-            if i % 2 == 1 and standalone == True:
-                print("Dry adjustment step", i+1, end=": ")
-                print("OLR = " + str(atm_dry.LW_flux_up[0]) + " W/m^2,", "dT_max = " + str(dTglobal_dry) + " K, dT_top = " + str(dTtop_dry) + " K, dOLR = " + str(dOLR_dry) + " W/m^2,")
+        # Convergence criteria
+        dTglobal_dry    = abs(round(np.max(atm_dry.tmp-PrevTemp_dry[:]), 4))
+        dTtop_dry       = abs(round(atm_dry.tmp[0]-atm_dry.tmp[1], 4))
 
-            # Reduce timestep if heating is not converging
-            if dTglobal_dry < 0.05 or dTtop_dry > dT_max:
-                atm_dry.dt  = atm_dry.dt*0.99
-                if standalone == True:
-                    print("Dry adiabat not converging -> dt_new =", round(atm_dry.dt,5), "days")
+        # Break criteria
+        dOLR_dry        = abs(round(atm_dry.LW_flux_up[0]-PrevOLR_dry, 6))
+        dbreak_dry      = (0.01*(5.67e-8*atm_dry.ts**4)**0.5)
 
-            # Sensitivity break condition
-            if (dOLR_dry < dbreak_dry) and i > 5:
-                if standalone == True:
-                    print("Timestepping break ->", end=" ")
-                    print("dOLR/step =", dOLR_dry, "W/m^2, dTglobal_dry =", dTglobal_dry)
-                break    # break here
-        except:
+        # Inform during runtime
+        if i % 2 == 1 and standalone == True:
+            print("Dry adjustment step", i+1, end=": ")
+            print("OLR = " + str(atm_dry.LW_flux_up[0]) + " W/m^2,", "dT_max = " + str(dTglobal_dry) + " K, dT_top = " + str(dTtop_dry) + " K, dOLR = " + str(dOLR_dry) + " W/m^2,")
+
+        # Reduce timestep if heating is not converging
+        if dTglobal_dry < 0.05 or dTtop_dry > dT_max:
+            atm_dry.dt  = atm_dry.dt*0.99
             if standalone == True:
-                print("Socrates cannot be executed properly, T profile:", atm_dry.tmp)
+                print("Dry adiabat not converging -> dt_new =", round(atm_dry.dt,5), "days")
+
+        # Sensitivity break condition
+        if (dOLR_dry < dbreak_dry) and i > 5:
+            if standalone == True:
+                print("Timestepping break ->", end=" ")
+                print("dOLR/step =", dOLR_dry, "W/m^2, dTglobal_dry =", dTglobal_dry)
             break    # break here
+        #except:
+        #    if standalone == True:
+        #        print("Socrates cannot be executed properly, T profile:", atm_dry.tmp)
+        #    break    # break here
 
         PrevOLR_dry       = atm_dry.LW_flux_up[0]
         PrevMaxHeat_dry   = abs(np.max(atm_dry.net_heating))
@@ -632,7 +670,7 @@ def compute_moist_adiabat(atm, dirs, standalone, trpp, rscatter): # no time-step
 def compute_moist_adiabat_timestep(atm, dirs, standalone, rscatter): # with time-stepping
 
     # Moist adiabat settings
-    rad_steps   = 10  # Maximum number of radiation steps
+    rad_steps   = 2  # Maximum number of radiation steps
     conv_steps  = 30   # Number of convective adjustment steps (per radiation step)
     dT_max      = 20.  # K, Maximum temperature change per radiation step
     T_floor     = 10.  # K, Temperature floor to prevent SOCRATES crash
@@ -641,38 +679,67 @@ def compute_moist_adiabat_timestep(atm, dirs, standalone, rscatter): # with time
     atm_moist = ga.general_adiabat(copy.deepcopy(atm))
 
     # Initialise previous OLR and TOA heating to zero
-    PrevOLR_dry         = 0.
-    PrevMaxHeat_dry     = 0.
-    PrevTemp_dry        = atm.tmp * 0.
+    PrevOLR_moist         = 0.
+    PrevMaxHeat_moist     = 0.
+    PrevTemp_moist        = atm.tmp * 0.
+
+    # Initialize surface temperature tendency
+    cp_surf               = 1.e6
+    ts_dt                 = 0.
 
     # Time stepping
     for i in range(0, rad_steps):
 
+        current = timer.time()
+        print(current - start)
         # Compute radiation, midpoint method time stepping
 
-        try:
-            # Run SOCRATES
-            atm_moist = SocRadModel.radCompSoc(atm_moist, dirs, recalc=False, calc_cf=False, rscatter=rscatter)
+        #try:
 
-            dT_moist  = atm_moist.net_heating * atm_moist.dt
+        #print('BADGER1')
+        # Run SOCRATES
+        atm_moist = SocRadModel.radCompSoc(atm_moist, dirs, recalc=False, calc_cf=False, rscatter=rscatter)
+        #print('BADGER2')
 
-            # Dry convective adjustment
-            dT_conv_dry  = DryAdj(atm_dry, conv_steps)
-            # Apply temperature tendency due to dry convection
-            dT_moist += dT_conv_dry
+        dT_moist  = atm_moist.net_heating * atm_moist.dt
+        #print('BADGER3')
 
-            # Moist convective adjustment
-            dT_conv_moist  = MoistAdj(atm_moist, conv_steps)
+        # Dry convective adjustment
+        dT_conv_dry  = DryAdj(atm_moist, conv_steps)
+        #print('BADGER4')
+        # Apply temperature tendency due to dry convection
+        dT_moist += dT_conv_dry
+        #print('BADGER5')
 
-            # Apply temperature tendency due to moist convection
-            dT_moist += dT_conv_moist
+        # Moist convective adjustment
+        dT_conv_moist  = MoistAdj(atm_moist, conv_steps)
+        #print('BADGER6')
 
-            # Limit the temperature change per step
-            dT_moist          = np.where(dT_moist > dT_max, dT_max, dT_moist)
-            dT_moist          = np.where(dT_moist < -dT_max, -dT_max, dT_moist)
+        # Apply temperature tendency due to moist convection
+        dT_moist += dT_conv_moist
+        #print('BADGER7')
 
-            # Apply heating
-            atm_moist.tmp     += dT_moist
+        # Limit the temperature change per step
+        dT_moist          = np.where(dT_moist > dT_max, dT_max, dT_moist)
+        dT_moist          = np.where(dT_moist < -dT_max, -dT_max, dT_moist)
+        #print('BADGER8')
+
+        # Apply heating
+        atm_moist.tmp     += atm_moist.dt*dT_moist
+        #print('BADGER9')
+
+        # Net surface flux (for surface temperature evolution) 
+        net_Fs = - atm_moist.net_flux[-1] # We have to define positive as downward (heating) and cooling (upward) in this case
+        ts_dt += net_Fs / cp_surf
+        atm_moist.ts += atm_moist.dt*ts_dt
+
+        # Do the surface balance
+        kturb       = .1
+        atm_moist.tmp[-1] += -atm_moist.dt * kturb * (atm_moist.tmp[-1] - atm_moist.ts)
+
+        # Handle condensation - update partial pressures and mixing ratios
+        for idx in range(len(atm_moist.p)):
+            atm_moist = ga.condensation(atm_moist, idx, prs_reset=False)
 
             # The stratosphere scheme is redundant here, a stratosphere will form on its own with timestepping and stellar heating
             # -----------------------------------------------------------------------------------------
@@ -695,40 +762,49 @@ def compute_moist_adiabat_timestep(atm, dirs, standalone, rscatter): # with time
             # -----------------------------------------------------------------------------------------
 
             # Temperature floor to prevent SOCRATES crash
-            if np.min(atm_moist.tmp) < T_floor:
-                atm_moist.tmp = np.where(atm_moist.tmp < T_floor, T_floor, atm_moist.tmp)
+        if np.min(atm_moist.tmp) < T_floor:
+            atm_moist.tmp = np.where(atm_moist.tmp < T_floor, T_floor, atm_moist.tmp)
+        #print('BADGER10')
 
-            # Convergence criteria
-            dTglobal_moist    = abs(round(np.max(atm_moist.tmp-PrevTemp_moist[:]), 4))
-            dTtop_moist       = abs(round(atm_moist.tmp[0]-atm_moist.tmp[1], 4))
+        # Convergence criteria
+        dTglobal_moist    = abs(round(np.max(atm_moist.tmp-PrevTemp_moist[:]), 4))
+        dTtop_moist       = abs(round(atm_moist.tmp[0]-atm_moist.tmp[1], 4))
 
-            # Break criteria
-            dOLR_moist        = abs(round(atm_moist.LW_flux_up[0]-PrevOLR_moist, 6))
-            dbreak_moist      = (0.01*(5.67e-8*atm_moist.ts**4)**0.5)
+        # Break criteria
+        dOLR_moist        = abs(round(atm_moist.LW_flux_up[0]-PrevOLR_moist, 6))
+        dbreak_moist      = (0.01*(5.67e-8*atm_moist.ts**4)**0.5)
+        #print('BADGER11')
 
-            # Inform during runtime
-            if i % 2 == 1 and standalone == True:
-                print("Moist adjustment step", i+1, end=": ")
-                print("OLR = " + str(atm_moist.LW_flux_up[0]) + " W/m^2,", "dT_max = " + str(dTglobal_moist) + " K, dT_top = " + str(dTtop_moist) + " K, dOLR = " + str(dOLR_moist) + " W/m^2,")
+        # Inform during runtime
+        if i % 2 == 1 and standalone == True:
+            print("Moist adjustment step", i+1, end=": ")
+            print("OLR = " + str(atm_moist.LW_flux_up[0]) + " W/m^2,", "dT_max = " + str(dTglobal_moist) + " K, dT_top = " + str(dTtop_moist) + " K, dOLR = " + str(dOLR_moist) + " W/m^2,")
 
-            # Reduce timestep if heating is not converging
-            if dTglobal_moist < 0.05 or dTtop_moist > dT_max:
-                atm_moist.dt  = atm_moist.dt*0.99
-                if standalone == True:
-                    print("Moist adiabat not converging -> dt_new =", round(atm_moist.dt,5), "days")
+        #print('BADGER12')
 
-            # Sensitivity break condition
-            if (dOLR_moist < dbreak_moist) and i > 5:
-                if standalone == True:
-                    print("Timestepping break ->", end=" ")
-                    print("dOLR/step =", dOLR_moist, "W/m^2, dTglobal_moist =", dTglobal_moist)
-                break    # break here
-
-        except:
+        # Reduce timestep if heating is not converging
+        if dTglobal_moist < 0.05 or dTtop_moist > dT_max:
+            atm_moist.dt  = atm_moist.dt*0.99
             if standalone == True:
-                print("Socrates cannot be executed properly, T profile:", atm_moist.tmp)
-            break    # break here
+                print("Moist adiabat not converging -> dt_new =", round(atm_moist.dt,5), "days")
 
+        #print('BADGER13')
+
+        # Sensitivity break condition
+        if (dOLR_moist < dbreak_moist) and i > 5:
+            if standalone == True:
+                print("Timestepping break ->", end=" ")
+                print("dOLR/step =", dOLR_moist, "W/m^2, dTglobal_moist =", dTglobal_moist)
+            break    # break here
+        #print('BADGER14')
+
+        #except:
+        #    if standalone == True:
+        #        print("Socrates cannot be executed properly, T profile:", atm_moist.tmp)
+        #        print('BADGER15')
+        #    break    # break here
+
+        #print('BADGER16')
         PrevOLR_moist       = atm_moist.LW_flux_up[0]
         PrevMaxHeat_moist   = abs(np.max(atm_moist.net_heating))
         PrevTemp_moist[:]   = atm_moist.tmp[:]
@@ -936,6 +1012,8 @@ def InterpolateStellarLuminosity(star_mass, time, mean_distance, albedo, Sfrac):
 ####################################
 if __name__ == "__main__":
 
+    start = timer.time()
+
     ##### Settings
 
     # Planet age and orbit
@@ -1009,9 +1087,13 @@ if __name__ == "__main__":
         print("TOA heating:", round(atm.toa_heating), "W/m^2")
 
     # Compute heat flux
-    atm_dry, atm_moist, atm_moist_timestep = RadConvEqm({"output": os.getcwd()+"/output", "rad_conv": os.getcwd()}, time, atm, [], [], standalone=True, cp_dry=False, moist_timestep=True, trpp=True, rscatter=rscatter) 
+    atm_dry, atm_moist, atm_moist_timestep = RadConvEqm({"output": os.getcwd()+"/output", "rad_conv": os.getcwd()}, time, atm, [], [], standalone=True, cp_dry=True, moist_timestep=True, trpp=True, rscatter=rscatter) 
 
     print(len(atm_moist_timestep.p))
 
     # Plot abundances w/ TP structure
-    ga.plot_adiabats(atm_moist)
+    # Commented just to run on slurm
+    #ga.plot_adiabats(atm_moist)
+
+    end = timer.time()
+    print(end - start)
