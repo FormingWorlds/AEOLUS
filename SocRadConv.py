@@ -681,7 +681,7 @@ def compute_moist_adiabat_timestep(atm, dirs, standalone, rscatter): # with time
     # Initialise previous OLR and TOA heating to zero
     PrevOLR_moist         = 0.
     PrevMaxHeat_moist     = 0.
-    PrevTemp_moist        = atm.tmp * 0.
+    PrevTemp_moist        = atm_moist.tmp * 0.
 
     # Initialize surface temperature tendency
     cp_surf               = 1.e6
@@ -691,15 +691,26 @@ def compute_moist_adiabat_timestep(atm, dirs, standalone, rscatter): # with time
     for i in range(0, rad_steps):
 
         current = timer.time()
-        print(current - start)
+        print("current time = ", current - start)
         # Compute radiation, midpoint method time stepping
 
         #try:
 
-        #print('BADGER1')
+        print('BADGER1')
+
+        print("------------------------------------------ Before Socrates -----")
+        print("Temperature (min/max) = ", min(atm_moist.tmp), max(atm_moist.tmp))
+        print("Net flux (min/max) = ", min(atm_moist.net_flux), max(atm_moist.net_flux))
+        print("Net heating = ", min(atm_moist.net_heating), max(atm_moist.net_heating))
+        print("Surface temperature = ", atm_moist.ts)
+        print("LW upward flux = ", min(atm_moist.LW_flux_up), max(atm_moist.LW_flux_up))
+        print("Timestep = ", atm_moist.dt)
+        print("dT: dry, moist, total = ", dT_conv_dry, dT_conv_moist, dT_moist)
+        print("----------------------------------------------------------------")
+
         # Run SOCRATES
         atm_moist = SocRadModel.radCompSoc(atm_moist, dirs, recalc=False, calc_cf=False, rscatter=rscatter)
-        #print('BADGER2')
+        print('BADGER2')
 
         dT_moist  = atm_moist.net_heating * atm_moist.dt
         #print('BADGER3')
@@ -726,7 +737,16 @@ def compute_moist_adiabat_timestep(atm, dirs, standalone, rscatter): # with time
 
         # Apply heating
         atm_moist.tmp     += atm_moist.dt*dT_moist
-        #print('BADGER9')
+        print('BADGER9')
+        print("------------------------------------------- After Socrates -----")
+        print("Temperature (min/max) = ", min(atm_moist.tmp), max(atm_moist.tmp))
+        print("Net flux (min/max) = ", min(atm_moist.net_flux), max(atm_moist.net_flux))
+        print("Net heating = ", min(atm_moist.net_heating), max(atm_moist.net_heating))
+        print("Surface temperature = ", atm_moist.ts)
+        print("LW upward flux = ", min(atm_moist.LW_flux_up), max(atm_moist.LW_flux_up))
+        print("Timestep = ", atm_moist.dt)
+        print("dT: dry, moist, total = ", dT_conv_dry, dT_conv_moist, dT_moist)
+        print("----------------------------------------------------------------")
 
         # Net surface flux (for surface temperature evolution) 
         net_Fs = - atm_moist.net_flux[-1] # We have to define positive as downward (heating) and cooling (upward) in this case
@@ -1012,6 +1032,8 @@ def InterpolateStellarLuminosity(star_mass, time, mean_distance, albedo, Sfrac):
 ####################################
 if __name__ == "__main__":
 
+    current_time = timer.strftime("%H:%M:%S", timer.localtime())
+    print("Time = ", current_time)
     start = timer.time()
 
     ##### Settings
@@ -1089,11 +1111,11 @@ if __name__ == "__main__":
     # Compute heat flux
     atm_dry, atm_moist, atm_moist_timestep = RadConvEqm({"output": os.getcwd()+"/output", "rad_conv": os.getcwd()}, time, atm, [], [], standalone=True, cp_dry=True, moist_timestep=True, trpp=True, rscatter=rscatter) 
 
-    print(len(atm_moist_timestep.p))
+    print("len(p) = ", len(atm_moist_timestep.p))
 
     # Plot abundances w/ TP structure
     # Commented just to run on slurm
     #ga.plot_adiabats(atm_moist)
 
     end = timer.time()
-    print(end - start)
+    print("End time = ", end - start)
