@@ -21,6 +21,7 @@ import pickle as pkl
 import json
 import glob, re, os
 import time as timer
+from datetime import datetime
 
 try:
     import phys
@@ -51,6 +52,31 @@ def surf_Planck_nu(atm):
         B[i]    = (c1*nu**3 / (np.exp(c2*nu/atm.ts)-1))
     B   = (1.-atm.albedo_s) * np.pi * B * atm.band_widths/1000.0
     return B
+
+def p_sat(switch,T):
+
+    # Define volatile
+    if switch == 'H2O':
+        e = phys.satvps_function(phys.water)
+    if switch == 'CH4':
+        e = phys.satvps_function(phys.methane)
+    if switch == 'CO2':
+        e = phys.satvps_function(phys.co2)
+    if switch == 'CO':
+        e = phys.satvps_function(phys.co)
+    if switch == 'N2':
+        e = phys.satvps_function(phys.n2)
+    if switch == 'O2':
+        e = phys.satvps_function(phys.o2)
+    if switch == 'H2':
+        e = phys.satvps_function(phys.h2)
+    if switch == 'He':
+        e = phys.satvps_function(phys.he)
+    if switch == 'NH3':
+        e = phys.satvps_function(phys.nh3)
+
+    # Return saturation vapor pressure
+    return e(T)
 
 def RadConvEqm(dirs, time, atm, loop_counter, COUPLER_options, standalone, cp_dry, moist_timestep, trpp, rscatter):
 
@@ -543,7 +569,7 @@ def plot_flux_balance(atm_dry, atm_moist, atm_moist_timestep, cp_dry, moist_time
 def compute_dry_adiabat(atm, dirs, standalone, rscatter):
 
     # Dry adiabat settings 
-    rad_steps   = 10  # Maximum number of radiation steps
+    rad_steps   = 2  # Maximum number of radiation steps
     conv_steps  = 30   # Number of convective adjustment steps (per radiation step)
     dT_max      = 20.  # K, Maximum temperature change per radiation step
     T_floor     = 10.  # K, Temperature floor to prevent SOCRATES crash
@@ -565,6 +591,8 @@ def compute_dry_adiabat(atm, dirs, standalone, rscatter):
 
     # Time stepping
     for i in range(0, rad_steps):
+
+        print("Radiative step number ", i)
 
         # atm.toa_heating = 0
 
@@ -691,26 +719,26 @@ def compute_moist_adiabat_timestep(atm, dirs, standalone, rscatter): # with time
     for i in range(0, rad_steps):
 
         current = timer.time()
-        print("current time = ", current - start)
+        #print("current time = ", current - start)
         # Compute radiation, midpoint method time stepping
+
+        #print("Radiative step number ", i)
 
         #try:
 
-        print('BADGER1')
+        #print('BADGER1')
 
-        print("------------------------------------------ Before Socrates -----")
-        print("Temperature (min/max) = ", min(atm_moist.tmp), max(atm_moist.tmp))
-        print("Net flux (min/max) = ", min(atm_moist.net_flux), max(atm_moist.net_flux))
-        print("Net heating = ", min(atm_moist.net_heating), max(atm_moist.net_heating))
-        print("Surface temperature = ", atm_moist.ts)
-        print("LW upward flux = ", min(atm_moist.LW_flux_up), max(atm_moist.LW_flux_up))
-        print("Timestep = ", atm_moist.dt)
-        print("dT: dry, moist, total = ", dT_conv_dry, dT_conv_moist, dT_moist)
-        print("----------------------------------------------------------------")
+        #print("------------------------------------------ Before Socrates -----")
+        #print("Temperature (min/max) = ", min(atm_moist.tmp), max(atm_moist.tmp))
+        #print("Net flux (min/max) = ", min(atm_moist.net_flux), max(atm_moist.net_flux))
+        #print("Net heating = ", min(atm_moist.net_heating), max(atm_moist.net_heating))
+        #print("Surface temperature = ", atm_moist.ts)
+        #print("LW upward flux = ", min(atm_moist.LW_flux_up), max(atm_moist.LW_flux_up))
+        #print("Timestep = ", atm_moist.dt)
 
         # Run SOCRATES
         atm_moist = SocRadModel.radCompSoc(atm_moist, dirs, recalc=False, calc_cf=False, rscatter=rscatter)
-        print('BADGER2')
+        #print('BADGER2')
 
         dT_moist  = atm_moist.net_heating * atm_moist.dt
         #print('BADGER3')
@@ -719,6 +747,7 @@ def compute_moist_adiabat_timestep(atm, dirs, standalone, rscatter): # with time
         dT_conv_dry  = DryAdj(atm_moist, conv_steps)
         #print('BADGER4')
         # Apply temperature tendency due to dry convection
+        #print("dT_conv_dry = ", len(dT_conv_dry))
         dT_moist += dT_conv_dry
         #print('BADGER5')
 
@@ -737,13 +766,13 @@ def compute_moist_adiabat_timestep(atm, dirs, standalone, rscatter): # with time
 
         # Apply heating
         atm_moist.tmp     += atm_moist.dt*dT_moist
-        print('BADGER9')
-        print("------------------------------------------- After Socrates -----")
+        #print('BADGER9')
+        #print("------------------------------------------- After Socrates -----")
         print("Temperature (min/max) = ", min(atm_moist.tmp), max(atm_moist.tmp))
         print("Net flux (min/max) = ", min(atm_moist.net_flux), max(atm_moist.net_flux))
-        print("Net heating = ", min(atm_moist.net_heating), max(atm_moist.net_heating))
+        print("Net heating (min/max) = ", min(atm_moist.net_heating), max(atm_moist.net_heating))
         print("Surface temperature = ", atm_moist.ts)
-        print("LW upward flux = ", min(atm_moist.LW_flux_up), max(atm_moist.LW_flux_up))
+        print("LW upward flux (min/max) = ", min(atm_moist.LW_flux_up), max(atm_moist.LW_flux_up))
         print("Timestep = ", atm_moist.dt)
         print("dT: dry, moist, total = ", dT_conv_dry, dT_conv_moist, dT_moist)
         print("----------------------------------------------------------------")
@@ -758,8 +787,12 @@ def compute_moist_adiabat_timestep(atm, dirs, standalone, rscatter): # with time
         atm_moist.tmp[-1] += -atm_moist.dt * kturb * (atm_moist.tmp[-1] - atm_moist.ts)
 
         # Handle condensation - update partial pressures and mixing ratios
-        for idx in range(len(atm_moist.p)):
-            atm_moist = ga.condensation(atm_moist, idx, prs_reset=False)
+        idx = 0
+        atm_moist   = ga.condensation(atm_moist, idx, prs_reset=False)
+        while atm_moist.p[idx] > atm_moist.ptop:
+            atm_moist     = ga.condensation(atm_moist, idx, prs_reset=False)
+
+        # ===========================================================================================
 
             # The stratosphere scheme is redundant here, a stratosphere will form on its own with timestepping and stellar heating
             # -----------------------------------------------------------------------------------------
@@ -781,7 +814,7 @@ def compute_moist_adiabat_timestep(atm, dirs, standalone, rscatter): # with time
             #        print("w/ stratosphere (net, OLR):", str(round(atm_moist.net_flux[0], 3)), str(round(atm_moist.LW_flux_up[0], 3)), "W/m^2")
             # -----------------------------------------------------------------------------------------
 
-            # Temperature floor to prevent SOCRATES crash
+        # Temperature floor to prevent SOCRATES crash
         if np.min(atm_moist.tmp) < T_floor:
             atm_moist.tmp = np.where(atm_moist.tmp < T_floor, T_floor, atm_moist.tmp)
         #print('BADGER10')
@@ -1032,8 +1065,9 @@ def InterpolateStellarLuminosity(star_mass, time, mean_distance, albedo, Sfrac):
 ####################################
 if __name__ == "__main__":
 
-    current_time = timer.strftime("%H:%M:%S", timer.localtime())
-    print("Time = ", current_time)
+    current_time = datetime.today().strftime('%Y-%m-%d-%H:%M:%S')
+    #current_time = timer.strftime("%H:%M:%S", timer.localtime())
+    print("Started on ", current_time)
     start = timer.time()
 
     ##### Settings
@@ -1109,7 +1143,7 @@ if __name__ == "__main__":
         print("TOA heating:", round(atm.toa_heating), "W/m^2")
 
     # Compute heat flux
-    atm_dry, atm_moist, atm_moist_timestep = RadConvEqm({"output": os.getcwd()+"/output", "rad_conv": os.getcwd()}, time, atm, [], [], standalone=True, cp_dry=True, moist_timestep=True, trpp=True, rscatter=rscatter) 
+    atm_dry, atm_moist, atm_moist_timestep = RadConvEqm({"output": os.getcwd()+"/output", "rad_conv": os.getcwd()}, time, atm, [], [], standalone=True, cp_dry=False, moist_timestep=True, trpp=True, rscatter=rscatter) 
 
     print("len(p) = ", len(atm_moist_timestep.p))
 
