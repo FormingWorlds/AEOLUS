@@ -51,32 +51,7 @@ def surf_Planck_nu(atm):
     B   = (1.-atm.albedo_s) * np.pi * B * atm.band_widths/1000.0
     return B
 
-def p_sat(switch,T):
-
-    # Define volatile
-    if switch == 'H2O':
-        e = phys.satvps_function(phys.water)
-    if switch == 'CH4':
-        e = phys.satvps_function(phys.methane)
-    if switch == 'CO2':
-        e = phys.satvps_function(phys.co2)
-    if switch == 'CO':
-        e = phys.satvps_function(phys.co)
-    if switch == 'N2':
-        e = phys.satvps_function(phys.n2)
-    if switch == 'O2':
-        e = phys.satvps_function(phys.o2)
-    if switch == 'H2':
-        e = phys.satvps_function(phys.h2)
-    if switch == 'He':
-        e = phys.satvps_function(phys.he)
-    if switch == 'NH3':
-        e = phys.satvps_function(phys.nh3)
-
-    # Return saturation vapor pressure
-    return e(T)
-
-def RadConvEqm(dirs, time, atm, loop_counter, COUPLER_options, standalone, cp_dry, moist_timestep, trpp, rscatter):
+def RadConvEqm(dirs, time, atm, loop_counter, COUPLER_options, standalone, cp_dry, trpp, calc_cf, rscatter):
 
     ### Moist/general adiabat
     atm_moist = compute_moist_adiabat(atm, dirs, standalone, trpp, calc_cf, rscatter)
@@ -93,16 +68,6 @@ def RadConvEqm(dirs, time, atm, loop_counter, COUPLER_options, standalone, cp_dr
             print()
     else: atm_dry = {}
     
-    ### Moist/general adiabat w/ timestepping
-    if moist_timestep == True:
-        atm_moist_timestep = compute_moist_adiabat_timestep(atm, dirs, standalone, rscatter)
-
-        if standalone == True:
-            print("Net, OLR => moist:", str(round(atm_moist.net_flux[0], 3)), str(round(atm_moist.LW_flux_up[0], 3)) + " W/m^2", end=" ")
-            print("| moist timestepped:", str(round(atm_moist_timestep.net_flux[0], 3)), str(round(atm_moist_timestep.LW_flux_up[0], 3)) + " W/m^2", end=" ")
-            print()
-    else: atm_moist_timestep = {}
-
     # Plot
     if standalone == True:
         plot_flux_balance(atm_dry, atm_moist, cp_dry, time, dirs)
@@ -110,7 +75,7 @@ def RadConvEqm(dirs, time, atm, loop_counter, COUPLER_options, standalone, cp_dr
         with open(dirs["output"]+"/"+str(int(time["planet"]))+"_atm.pkl", "wb") as atm_file: 
             pkl.dump(atm_moist, atm_file, protocol=pkl.HIGHEST_PROTOCOL)
 
-    return atm_dry, atm_moist, atm_moist_timestep
+    return atm_dry, atm_moist
 
 # Dry adiabat profile
 def dry_adiabat_atm(atm):
@@ -176,61 +141,6 @@ def DryAdj(atm):
             atm.tmp[i+1] = T2 
 
     return atm      
-
-# Dry convective adjustment - returns the tendency: good. Also conserves dry enthalpy.
-def DryAdj(atm, itermax):
-
-    #print('BADGER0dryadj')
-    # Here 'l' designates layers and length 100, and 'e' designates edges and length 101. It's the opposite elsewhere...
-    Tl    = atm.tmp 
-    pe    = atm.pl
-    pl    = atm.p
-    Tl_cc = Tl
-    nlay    = len(Tl_cc)
-
-    d_p   = np.ones(len(pl))
-
-    small = 1.0e-6
-
-    #print('BADGER1dryadj')
-    for i in range(nlay):
-        d_p[i] = pe[i+1] - pe[i]
-
-    #print('BADGER2dryadj')
-    for iteration in range(itermax):
-        did_adj = False
-
-        # Downward pass
-        for i in range(nlay-2): # from layer 0 to layer nlay-2
-            #print('BADGER3dryadj')
-
-            pfact = (pl[i]/pl[i+1])**atm.Rcp
-            if (Tl_cc[i] < (Tl_cc[i+1]*pfact - small)):
-                Tbar = (d_p[i]*Tl_cc[i] + d_p[i+1]*Tl_cc[i+1]) / (d_p[i] + d_p[i+1])
-                Tl_cc[i+1] = (d_p[i] + d_p[i+1])*Tbar / (d_p[i+1]+pfact*d_p[i])
-                Tl_cc[i] = Tl_cc[i+1] * pfact
-                did_adj = True
-                #print('BADGER4dryadj')
-
-        # Upward pass
-        for i in range(nlay-2, -1, -1): # from layer nlay-2 to layer 0
-            #print('BADGER5dryadj')
-            pfact = (pl[i]/pl[i+1])**atm.Rcp
-            if (Tl_cc[i] < (Tl_cc[i+1]*pfact - small)):
-                Tbar = (d_p[i]*Tl_cc[i] + d_p[i+1]*Tl_cc[i+1]) / (d_p[i] + d_p[i+1])
-                Tl_cc[i+1] = (d_p[i] + d_p[i+1])*Tbar / (d_p[i+1]+pfact*d_p[i])
-                Tl_cc[i] = Tl_cc[i+1] * pfact
-                did_adj = True
-                #print('BADGER6dryadj')
-
-        # If no adjustment required, exit the loop
-        if (did_adj == False):
-            break
-
-    # Change in temperature is Tl_cc - Tl
-    # adjust on timescale of 1 timestep (i.e. instant correction across one timestep)
-    dT_conv_dry = (Tl_cc - Tl)/atm.dt
-    return dT_conv_dry
 
 # # Moist convective adjustment
 # def MoistAdj(atm, dT):
@@ -422,11 +332,6 @@ def compute_dry_adiabat(atm, dirs, standalone, calc_cf=False, rscatter=False):
             
             dT_dry          = atm_dry.net_heating * atm_dry.dt
 
-            # Dry convective adjustment
-            dT_conv_dry  = DryAdj(atm_dry, conv_steps)
-            # Apply temperature tendency due to dry convection
-            dT_dry += dT_conv_dry
-
             # Limit the temperature change per step
             dT_dry          = np.where(dT_dry > dT_max, dT_max, dT_dry)
             dT_dry          = np.where(dT_dry < -dT_max, -dT_max, dT_dry)
@@ -434,44 +339,39 @@ def compute_dry_adiabat(atm, dirs, standalone, calc_cf=False, rscatter=False):
             # Apply heating
             atm_dry.tmp     += dT_dry
 
-                    # Net surface flux (for surface temperature evolution)
-        net_Fs = - atm_dry.net_flux[-1] # We have to define positive as downward (heating) and cooling (upward) in this case
-        ts_dt += net_Fs / cp_surf
-        atm_dry.ts += atm_dry.dt*ts_dt
+            # # Do the surface balance
+            # kturb       = .1
+            # atm.tmp[-1] += -atm.dt * kturb * (atm.tmp[-1] - atm.ts)
+            
+            # Dry convective adjustment
+            for iadj in range(conv_steps):
+                atm_dry     = DryAdj(atm_dry)
 
-        # Do the surface balance
-        kturb       = .1
-        atm_dry.tmp[-1] += -atm_dry.dt * kturb * (atm_dry.tmp[-1] - atm_dry.ts)
+            # Temperature floor to prevent SOCRATES crash
+            if np.min(atm_dry.tmp) < T_floor:
+                atm_dry.tmp = np.where(atm_dry.tmp < T_floor, T_floor, atm_dry.tmp)
 
-        # Dry convective adjustment (old, changed tmp directly)
-        #for iadj in range(conv_steps):
-            #atm_dry     = DryAdj(atm_dry)
+            # Convergence criteria
+            dTglobal_dry    = abs(round(np.max(atm_dry.tmp-PrevTemp_dry[:]), 4))
+            dTtop_dry       = abs(round(atm_dry.tmp[0]-atm_dry.tmp[1], 4))
 
-        # Temperature floor to prevent SOCRATES crash
-        if np.min(atm_dry.tmp) < T_floor:
-            atm_dry.tmp = np.where(atm_dry.tmp < T_floor, T_floor, atm_dry.tmp)
+            # Break criteria
+            dOLR_dry        = abs(round(atm_dry.LW_flux_up[0]-PrevOLR_dry, 6))
+            dbreak_dry      = (0.01*(5.67e-8*atm_dry.ts**4)**0.5)
 
-        # Convergence criteria
-        dTglobal_dry    = abs(round(np.max(atm_dry.tmp-PrevTemp_dry[:]), 4))
-        dTtop_dry       = abs(round(atm_dry.tmp[0]-atm_dry.tmp[1], 4))
+            # Inform during runtime
+            if i % 2 == 1 and standalone == True:
+                print("Dry adjustment step", i+1, end=": ")
+                print("OLR = " + str(atm_dry.LW_flux_up[0]) + " W/m^2,", "dT_max = " + str(dTglobal_dry) + " K, dT_top = " + str(dTtop_dry) + " K, dOLR = " + str(dOLR_dry) + " W/m^2,")
 
-        # Break criteria
-        dOLR_dry        = abs(round(atm_dry.LW_flux_up[0]-PrevOLR_dry, 6))
-        dbreak_dry      = (0.01*(5.67e-8*atm_dry.ts**4)**0.5)
+            # Reduce timestep if heating is not converging
+            if dTglobal_dry < 0.05 or dTtop_dry > dT_max:
+                atm_dry.dt  = atm_dry.dt*0.99
+                if standalone == True:
+                    print("Dry adiabat not converging -> dt_new =", round(atm_dry.dt,5), "days")
 
-        # Inform during runtime
-        if i % 2 == 1 and standalone == True:
-            print("Dry adjustment step", i+1, end=": ")
-            print("OLR = " + str(atm_dry.LW_flux_up[0]) + " W/m^2,", "dT_max = " + str(dTglobal_dry) + " K, dT_top = " + str(dTtop_dry) + " K, dOLR = " + str(dOLR_dry) + " W/m^2,")
-
-        # Reduce timestep if heating is not converging
-        if dTglobal_dry < 0.05 or dTtop_dry > dT_max:
-            atm_dry.dt  = atm_dry.dt*0.99
-            if standalone == True:
-                print("Dry adiabat not converging -> dt_new =", round(atm_dry.dt,5), "days")
-
-        # Sensitivity break condition
-        if (dOLR_dry < dbreak_dry) and i > 5:
+            # Sensitivity break condition
+            if (dOLR_dry < dbreak_dry) and i > 5:
                 if standalone == True:
                     print("Timestepping break ->", end=" ")
                     print("dOLR/step =", dOLR_dry, "W/m^2, dTglobal_dry =", dTglobal_dry)
@@ -814,10 +714,7 @@ if __name__ == "__main__":
     # Compute heat flux
     atm_dry, atm_moist = RadConvEqm({"output": os.getcwd()+"/output", "rad_conv": os.getcwd()}, time, atm, [], [], standalone=True, cp_dry=False, trpp=True, calc_cf=calc_cf, rscatter=rscatter) 
 
-    atm_dry, atm_moist, atm_moist_timestep = RadConvEqm({"output": os.getcwd()+"/output", "rad_conv": os.getcwd()}, time, atm, [], [], standalone=True, cp_dry=False, moist_timestep=True, trpp=True, rscatter=rscatter)
-
     print(len(atm_moist.p))
-    print("len(p) = ", len(atm_moist_timestep.p))
 
     # Plot abundances w/ TP structure
     ga.plot_adiabats(atm_moist)
