@@ -46,10 +46,16 @@ def radCompSoc(atm, dirs, recalc, calc_cf=False, rscatter=False):
               "He"  : 0.0040026,            # kg mol−1 
               "NH3" : 0.017031,             # kg mol−1 
             }
+
+    # Define stellar spectrum to use, options:
+    # Sun_t456Myr_kurucz_95 F2V_hd128167 M45_ADLeo Sun_t0_0Ga_claire_12 (t: 0.0 – 4.55)
+    star_name           = "Sun_t0_0Ga_claire_12"
+    
     # Define path to spectral file
-    spectral_name = "sp_b318_HITRAN_a16"
-    spectral_dir  = dirs["rad_conv"]+"/spectral_files/"+spectral_name+"/"
-    spectral_file = spectral_dir+spectral_name
+    spectral_base_name  = "sp_b318_HITRAN_a16"
+    spectral_name       = "sp_b318_HITRAN_a16"+"_"+star_name
+    spectral_dir        = dirs["rad_conv"]+"/spectral_files/"+spectral_base_name+"/"
+    spectral_file       = spectral_dir+spectral_name
 
     # Rayleigh scattering for CO2
     if rscatter == True:

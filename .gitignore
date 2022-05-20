@@ -28,3 +28,6 @@ rad_trans/socrates_cff/
 
 # Video files
 *.mp4
+spectral_files/sp_b318_HITRAN_a16_gen_original
+spectral_files/sp_b318_HITRAN_a16_2203/temp
+spectral_files/sp_b318_HITRAN_a16_2203

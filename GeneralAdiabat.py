@@ -753,7 +753,7 @@ def general_adiabat( atm ):
     if new_psurf != atm.ps:
         for vol in atm.vol_list.keys():
             atm.vol_list[vol] = new_p_vol[vol] / new_psurf
-        atm = atmos(Tsurf, new_psurf, atm.vol_list)
+        atm = atmos(Tsurf, new_psurf, atm.vol_list, trppT=atm.trppT)
         atm.alpha_cloud = alpha
         
     
