@@ -154,6 +154,33 @@ def DryAdj(atm):
 
 #     return atm 
 
+#Moist adjustment routine.
+def moist_adj(Tmid,pmid,pint,conv_timescale):
+    dT_conv = np.zeros(len(pmid))
+    Tmid_cc = np.zeros(len(pmid))
+    for i in range(len(pmid)):
+        Tmid_cc[i] = Tmid[i]
+    nb_convsteps = 10
+    for i_conv in range(nb_convsteps):
+        did_adj = False
+        #------------------- L = cst -------------------
+        for i in range(len(Tmid_cc)-1): #Downward pass
+            if (Tmid_cc[i] < ga.Tdew('H2O',pmid[i])):
+                Tmid_cc[i]=ga.Tdew('H2O',pmid[i])
+                did_adj = True
+        for i in range(len(Tmid_cc)-2,-1,-1): #Upward pass
+            if (Tmid_cc[i] < ga.Tdew('H2O',pmid[i])):
+                Tmid_cc[i]=ga.Tdew('H2O',pmid[i])
+                did_adj = True
+
+        # If no adjustment required, exit the loop
+        if (did_adj == False):
+            break
+
+    # Change in temperature is Tmid_cc - Tmid
+    dT_conv[:] = (Tmid_cc[:] - Tmid[:])/conv_timescale
+    return dT_conv
+
 def plot_flux_balance(atm_dry, atm_moist, cp_dry, time, dirs):
 
     fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(13,10))
@@ -338,6 +365,11 @@ def compute_dry_adiabat(atm, dirs, standalone, calc_cf=False, rscatter=False):
 
             # Apply heating
             atm_dry.tmp     += dT_dry
+
+            pure_steam_adj = True
+            if pure_steam_adj:
+                dT_moist = moist_adj(atm_dry.tmp,atm_dry.p,atm_dry.pl,1000.)
+                atm_dry.tmp     += dT_moist
 
             # # Do the surface balance
             # kturb       = .1
@@ -712,7 +744,7 @@ if __name__ == "__main__":
         print("TOA heating:", round(atm.toa_heating), "W/m^2")
 
     # Compute heat flux
-    atm_dry, atm_moist = RadConvEqm({"output": os.getcwd()+"/output", "rad_conv": os.getcwd()}, time, atm, [], [], standalone=True, cp_dry=False, trpp=True, calc_cf=calc_cf, rscatter=rscatter) 
+    atm_dry, atm_moist = RadConvEqm({"output": os.getcwd()+"/output", "rad_conv": os.getcwd()}, time, atm, [], [], standalone=True, cp_dry=True, trpp=True, calc_cf=calc_cf, rscatter=rscatter) 
 
     print(len(atm_moist.p))
 
