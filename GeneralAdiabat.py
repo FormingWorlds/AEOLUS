@@ -511,11 +511,15 @@ def moist_slope(lnP, lnT, atm):
 
 def condensation( atm, idx, prs_reset):
 
+    #print("BADGER1")
     # Temperature floor
     tmp = np.amax([atm.tmp[idx], 20.])
+    #print("1. tmp = ", tmp)
+    #print("BADGER2")
     
     
     if idx==0:
+        #print("BADGER3")
         
         p_tot_pre_condensation = atm.p[idx]
         # Renormalize mixing ratios to ensure sum == 1
@@ -525,30 +529,39 @@ def condensation( atm, idx, prs_reset):
                 vol_list_new[vol]   = atm.vol_list[vol] / sum(atm.vol_list.values())
             for vol in atm.vol_list.keys():
                 atm.vol_list[vol] = vol_list_new[vol]
+                #print("2. atm.vol_list[vol] = ", atm.vol_list[vol])
+        #print("BADGER4")
     # Calculating the pressure an air parcel would have at this temperature IF 
     # the parcel moved adiabatically upward from the below level w/o condensation
     # e.g. following dry adiabat from previous level
     else:
+        #print("BADGER5")
         # Calculating mean cp in layer below; multiplied  by xd+xv because this cp is renormalized by that sum during the calculation
         cp_local = atm.cp[idx-1] * ( atm.xd[idx-1] + atm.xv[idx-1] ) 
-        #print(cp_local)
+        #print("3. cp_local = ", cp_local)
         
         # Dry adiabatic pressure calculated from dP/dT = P/T * cp/R
         p_tot_pre_condensation = atm.p[idx-1] + ( tmp - atm.tmp[idx-1] ) * atm.p[idx-1] / atm.tmp[idx-1] * cp_local / phys.R_gas
-        #print(p_tot_pre_condensation)
-    
+        #print("4. p_tot_pre_condensation = ", p_tot_pre_condensation)
+        #print("BADGER6")
+    #print("BADGER7")
     
     
     # Partial pressures and molar mass: pre-condensation values
     for vol in atm.vol_list.keys():
         if idx == 0:
     
+            #print("BADGER8")
             # Partial pressures scaled 
             # atm.p_vol[vol][idx] = atm.vol_list[vol] * atm.p[idx]
             atm.p_vol[vol][idx] = atm.vol_list[vol] * p_tot_pre_condensation
             # Mean gas phase molar mass
             atm.mu[idx]       += atm.vol_list[vol] * molar_mass[vol]
+            #print("5. atm.p_vol[vol][idx] = ", atm.p_vol[vol][idx])
+            #print("6. atm.mu[idx] = ", atm.mu[idx])
+            #print("BADGER9")
         else:
+            #print("BADGER10")
             # Sum up gaseous mixing ratios to normalize
             x_sum = 0
             
@@ -560,9 +573,12 @@ def condensation( atm, idx, prs_reset):
             
             # Scale the pre-condensation dry partial pressure by this volume mixing ratio
             atm.p_vol[vol][idx] = x_vol * p_tot_pre_condensation
+            #print("7. atm.p_vol[vol][idx] = ", atm.p_vol[vol][idx])
             
             # Mean gas phase molar mass, pre-condensation
             atm.mu[idx] += x_vol * molar_mass[vol]
+            #print("8. atm.mu[idx] = ", atm.mu[idx])
+            #print("BADGER11")
     # Account for condensation
     
     # Total pressure of condensing phases
@@ -580,7 +596,7 @@ def condensation( atm, idx, prs_reset):
     # List of condensing species
     wet_list = []
     
-    
+    #print("BADGER12")
       
     while condensation_flag == True:
         
@@ -589,13 +605,13 @@ def condensation( atm, idx, prs_reset):
         condensation_flag = False
         
         # Loop through species
-        
+        #print("BADGER13")
         for vol in atm.vol_list.keys():
             
-            
+            #print("BADGER14")
             # Condensation if p_i > p_sat
             if atm.p_vol[vol][idx] > p_sat(vol, tmp):
-                
+                #print("BADGER15")
                 # Add condensing species to wet_list
                 wet_list.append(vol)
                 
@@ -606,6 +622,8 @@ def condensation( atm, idx, prs_reset):
                 
                 # Set species partial pressure to p_sat
                 atm.p_vol[vol][idx]  = p_sat(vol, tmp)
+                #print("9. p_sat(vol, tmp) = ", p_sat(vol, tmp))
+                #print("10. atm.p_vol[vol][idx] = ", atm.p_vol[vol][idx])
                 
                 # Add the species partial pressure to the condensing species sum
                 p_cond_sum += atm.p_vol[vol][idx]
@@ -614,13 +632,14 @@ def condensation( atm, idx, prs_reset):
                 if vol in dry_list:
                     
                     dry_list.remove(vol)
-                
+                #print("BADGER16")
             else:
-                
+                #print("BADGER17")
                 # Add a non-condensing species to the list of dry species
                 # if it's present (>0) and if it's not in a list already
                 if atm.vol_list[vol] > 0. and vol not in dry_list and vol not in wet_list:
                     dry_list.append(vol)
+                #print("BADGER18")
     
     #print(dry_list)
     # Calculate the total partial pressure of dry species
@@ -628,7 +647,7 @@ def condensation( atm, idx, prs_reset):
     
     # Sum of dry volatile fractions from vol_list
     dry_frac_sum = 0
-    
+    #print("BADGER19")
     if idx == 0:
         # Calculate dry_frac_sum
         for vol in dry_list:
@@ -636,29 +655,36 @@ def condensation( atm, idx, prs_reset):
     else:
         for vol in dry_list:
             dry_frac_sum += atm.x_gas[vol][idx-1]
+        #print("BADGER20")
     # Calculate individual dry partial pressures by multiplying the total dry partial
     # pressure by the mixing ratio of each dry species w.r.t. the rest of the dry species
     if idx == 0:
         for vol in dry_list:
             #print(vol)
             atm.p_vol[vol][idx] = p_dry_tot * ( atm.vol_list[vol] / dry_frac_sum )
+            #print("BADGER21")
+            #print("11. atm.p_vol[vol][idx] = ", atm.p_vol[vol][idx])
     else:
         for vol in dry_list:
             atm.p_vol[vol][idx] = p_dry_tot * ( atm.x_gas[vol][idx-1] / dry_frac_sum )
     # Reset mean molar mass
     atm.mu[idx]   = 0.
     p_vol_sum       = 0.
-    
+    #print("BADGER22")
     # Calculate new mean molar mass
     for vol in atm.vol_list.keys():
         atm.mu[idx]   += molar_mass[vol] * atm.p_vol[vol][idx]
     atm.mu[idx] /= atm.p[idx]
+    #print("BADGER23")
+    #print("12. atm.mu[idx] = ", atm.mu[idx])
     
     # Update mixing ratios
     for vol in atm.vol_list.keys():
 
         # Mean molar mass
         p_vol_sum       += atm.p_vol[vol][idx]
+        #print("13. p_sat(vol, tmp) = ", p_sat(vol, tmp))
+        #print("14. atm.p_vol[vol][idx] = ", atm.p_vol[vol][idx])
 
         # Condensate phase
         if atm.p_vol[vol][idx] < p_sat(vol, tmp):
@@ -670,11 +696,11 @@ def condensation( atm, idx, prs_reset):
             else:
                 atm.x_cond[vol][idx] = atm.x_cond[vol][idx-1] + atm.x_gas[vol][idx-1] - ( 1-atm.xc[idx-1] ) * ( mu_old / atm.mu[idx] * atm.p_vol[vol][idx] / p_tot_pre_condensation )
             
-
+        #print("BADGER24")
         #atm.x_cond[vol][idx] *= atm.alpha_cloud
-
         # Add to molar concentration of total condensed phase
         atm.xc[idx]     += atm.x_cond[vol][idx]
+        #print("15. atm.x_cond[vol][idx] = ", atm.x_cond[vol][idx])
         
         # Gas phase molar concentration
         #atm.x_gas[vol][idx] = atm.p_vol[vol][idx] / atm.p[idx]
@@ -682,23 +708,25 @@ def condensation( atm, idx, prs_reset):
             atm.x_gas[vol][idx] =  mu_old / atm.mu[idx] * atm.p_vol[vol][idx] /  p_tot_pre_condensation
         else:
             atm.x_gas[vol][idx] =  ( 1-atm.xc[idx-1] ) * mu_old / atm.mu[idx] * atm.p_vol[vol][idx] /  p_tot_pre_condensation
-        
+        #print("BADGER25")
         # Add to molar concentration of total gas (dry or moist) phase
         # ! REVISIT ! keeping xd == 0 leads to a bug, why?
         if atm.p_vol[vol][idx] < p_sat(vol, tmp):
             atm.xd[idx]          += atm.x_gas[vol][idx]
         else:
             atm.xv[idx]          += atm.x_gas[vol][idx]
-        
+        #print("BADGER26")
         # Mean cp of both gas phase and retained condensates
         atm.cp[idx]    += atm.x_gas[vol][idx] * cpv(vol, atm.tmp[idx]) + atm.x_cond[vol][idx] * cp_cond(vol, atm.tmp[idx]) * atm.alpha_cloud
 
     # Renormalize cp w/ molar concentration (= cp_hat, Eq. 1, Li+2018)
     atm.cp[idx]  = atm.cp[idx] / ( atm.xd[idx] + atm.xv[idx] )
+    #print("16. atm.cp[idx] = ", atm.cp[idx])
 
     # Dry concentration floor
     atm.xd[idx]  = np.amax([atm.xd[idx], 1e-10])
-    
+    #print("BADGER27")
+    #print("17. atm.xd[idx] = ", atm.xd[idx])
     
     return atm
 

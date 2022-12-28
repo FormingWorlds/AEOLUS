@@ -213,45 +213,45 @@ def radCompSoc(atm, dirs, recalc, calc_cf=False, rscatter=False):
 
     ##### Fluxes
 
-    if calc_cf == False:
+#    if calc_cf == False:
 
-        # Upward SW + LW flux summed over all bands (W/m^2)
-        atm.SW_flux_up          = np.sum(uflxsw[:,:],axis=0)[:,0,0]
-        atm.LW_flux_up          = np.sum(uflxlw[:,:],axis=0)[:,0,0]
+    # Upward SW + LW flux summed over all bands (W/m^2)
+    atm.SW_flux_up          = np.sum(uflxsw[:,:],axis=0)[:,0,0]
+    atm.LW_flux_up          = np.sum(uflxlw[:,:],axis=0)[:,0,0]
 
-        # Downward SW + LW flux summed over all bands (W/m^2)
-        atm.SW_flux_down        = np.sum(vflxsw[:,:],axis=0)[:,0,0]
-        atm.LW_flux_down        = np.sum(dflxlw[:,:],axis=0)[:,0,0]
+    # Downward SW + LW flux summed over all bands (W/m^2)
+    atm.SW_flux_down        = np.sum(vflxsw[:,:],axis=0)[:,0,0]
+    atm.LW_flux_down        = np.sum(dflxlw[:,:],axis=0)[:,0,0]
 
-        # Net SW + LW flux summed over all bands (W/m^2)
-        atm.SW_flux_net         = np.squeeze(np.sum(uflxsw[:,:],axis=0)[:,0,0] - np.sum(vflxsw[:,:],axis=0)[:,0,0])
-        atm.LW_flux_net         = np.squeeze(np.sum(uflxlw[:,:],axis=0)[:,0,0] - np.sum(dflxlw[:,:],axis=0)[:,0,0])
+    # Net SW + LW flux summed over all bands (W/m^2)
+    atm.SW_flux_net         = np.squeeze(np.sum(uflxsw[:,:],axis=0)[:,0,0] - np.sum(vflxsw[:,:],axis=0)[:,0,0])
+    atm.LW_flux_net         = np.squeeze(np.sum(uflxlw[:,:],axis=0)[:,0,0] - np.sum(dflxlw[:,:],axis=0)[:,0,0])
 
-        # Upward SW + LW flux per band, W/m^2/(band)
-        atm.LW_spectral_flux_up = uflxlw[:,:,0,0]
-        atm.SW_spectral_flux_up = uflxsw[:,:,0,0]
+    # Upward SW + LW flux per band, W/m^2/(band)
+    atm.LW_spectral_flux_up = uflxlw[:,:,0,0]
+    atm.SW_spectral_flux_up = uflxsw[:,:,0,0]
 
-        # Total up- and downward fluxes, (W/m^2)
-        atm.flux_up_total       = np.squeeze(np.sum(uflxlw[:,:],axis=0)[:,0,0] + np.sum(uflxsw[:,:],axis=0)[:,0,0]) 
-        atm.flux_down_total     = np.squeeze(np.sum(vflxsw[:,:],axis=0)[:,0,0] + np.sum(dflxlw[:,:],axis=0)[:,0,0])
+    # Total up- and downward fluxes, (W/m^2)
+    atm.flux_up_total       = np.squeeze(np.sum(uflxlw[:,:],axis=0)[:,0,0] + np.sum(uflxsw[:,:],axis=0)[:,0,0]) 
+    atm.flux_down_total     = np.squeeze(np.sum(vflxsw[:,:],axis=0)[:,0,0] + np.sum(dflxlw[:,:],axis=0)[:,0,0])
 
-        # Total net flux (W/m^2)
-        atm.net_flux            = np.squeeze(np.sum(uflxlw[:,:],axis=0)[:,0,0] - np.sum(dflxlw[:,:],axis=0)[:,0,0] + np.sum(uflxsw[:,:],axis=0)[:,0,0] -  np.sum(vflxsw[:,:],axis=0)[:,0,0])
+    # Total net flux (W/m^2)
+    atm.net_flux            = np.squeeze(np.sum(uflxlw[:,:],axis=0)[:,0,0] - np.sum(dflxlw[:,:],axis=0)[:,0,0] + np.sum(uflxsw[:,:],axis=0)[:,0,0] -  np.sum(vflxsw[:,:],axis=0)[:,0,0])
 
-        # Total net flux per band (W/m^2/(band))
-        atm.net_spectral_flux   = uflxlw[:,:,0,0] + uflxsw[:,:,0,0] - dflxlw[:,:,0,0] - vflxsw[:,:,0,0]
+    # Total net flux per band (W/m^2/(band))
+    atm.net_spectral_flux   = uflxlw[:,:,0,0] + uflxsw[:,:,0,0] - dflxlw[:,:,0,0] - vflxsw[:,:,0,0]
 
-        ##### Heating rates
+    ##### Heating rates
 
-        # Heating rates only for no recalc: recalc if tropopause was found
-        if recalc == False:
+    # Heating rates only for no recalc: recalc if tropopause was found
+    if recalc == False:
 
-            # Individual heating contributions (K/day)
-            atm.SW_heating          = np.sum(hrtssw[:,:],axis=0)[:,0,0]
-            atm.LW_heating          = np.sum(hrtslw[:,:],axis=0)[:,0,0]
+        # Individual heating contributions (K/day)
+        atm.SW_heating          = np.sum(hrtssw[:,:],axis=0)[:,0,0]
+        atm.LW_heating          = np.sum(hrtslw[:,:],axis=0)[:,0,0]
 
-            # Total heating (K/day)
-            atm.net_heating       = np.squeeze(np.sum(hrtssw[:,:],axis=0) + np.sum(hrtslw[:,:],axis=0))
+        # Total heating (K/day)
+        atm.net_heating       = np.squeeze(np.sum(hrtssw[:,:],axis=0) + np.sum(hrtslw[:,:],axis=0))
     
     ### Contribution function
     if calc_cf == True:
