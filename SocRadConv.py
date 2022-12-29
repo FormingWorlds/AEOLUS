@@ -20,7 +20,7 @@ import pathlib
 import pickle as pkl
 import json
 import glob, re, os
-import time
+import time as t
 
 try:
     import phys
@@ -673,7 +673,7 @@ def InterpolateStellarLuminosity(star_mass, time, mean_distance, albedo, Sfrac):
 ####################################
 if __name__ == "__main__":
 
-    start = time.time()
+    start = t.time()
     ##### Settings
 
     # Planet age and orbit
@@ -757,7 +757,7 @@ if __name__ == "__main__":
     # Plot abundances w/ TP structure
     ga.plot_adiabats(atm_moist)
 
-    end = time.time()
+    end = t.time()
     print(end - start)
 
     ClausiusClapeyron = [ga.Tdew('H2O',p) for p in atm_moist.p]
