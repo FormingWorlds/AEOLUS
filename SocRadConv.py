@@ -20,6 +20,7 @@ import pathlib
 import pickle as pkl
 import json
 import glob, re, os
+import time
 
 try:
     import phys
@@ -332,7 +333,7 @@ def plot_flux_balance(atm_dry, atm_moist, cp_dry, time, dirs):
 def compute_dry_adiabat(atm, dirs, standalone, calc_cf=False, rscatter=False):
 
     # Dry adiabat settings 
-    rad_steps   = 100  # Maximum number of radiation steps
+    rad_steps   = 10  # Maximum number of radiation steps
     conv_steps  = 30   # Number of convective adjustment steps (per radiation step)
     dT_max      = 20.  # K, Maximum temperature change per radiation step
     T_floor     = 10.  # K, Temperature floor to prevent SOCRATES crash
@@ -662,8 +663,8 @@ def InterpolateStellarLuminosity(star_mass, time, mean_distance, albedo, Sfrac):
     toa_heating             = ( 1. - albedo ) * S_0 / 4.
 
     # If the age is not known with enough accuracy, define the ISR manually
-    #L_star                  = 0.000553*L_sun                                           # Trappist-1 luminosity
-    #toa_heating             = ( 1. - 0. ) * (L_star/(4.*np.pi*(mean_distance*AU)**2.)) # Tidally-locked, zero albedo
+    L_star                  = 0.000553*L_sun                                           # Trappist-1 luminosity
+    toa_heating             = ( 1. - 0. ) * (L_star/(4.*np.pi*(mean_distance*AU)**2.)) # Tidally-locked, zero albedo
    
     return toa_heating
 
@@ -672,18 +673,19 @@ def InterpolateStellarLuminosity(star_mass, time, mean_distance, albedo, Sfrac):
 ####################################
 if __name__ == "__main__":
 
+    start = time.time()
     ##### Settings
 
     # Planet age and orbit
     time = { "planet": 0., "star": 4567e+6 } # yr,
     # time_current  = 0                 # yr, time after start of MO
     # time_offset   = 4567e+6           # yr, time relative to star formation
-    star_mass     = 1.0                 # M_sun, mass of star
-    mean_distance = 1.0                 # au, orbital distance
+    star_mass     = 0.08    #1.0                 # M_sun, mass of star
+    mean_distance = 0.01154 #1.0                 # au, orbital distance
 
     # Surface pressure & temperature
     
-    T_surf        = 1200.                # K
+    T_surf        = 1225.0                # K
 
     # # Volatile molar concentrations: must sum to ~1 !
     # P_surf        = 210e+5              # Pa
@@ -711,14 +713,14 @@ if __name__ == "__main__":
     P_surf      = "calc"   
      # Volatiles considered
     vol_list    = { 
-                          "H2O" :  1.00e+5,
+                          "H2O" :  1.00e+6,
                           "NH3" :  0.,
-                          "CO2" :  40.e+5,
-                          "CH4" :  0.e+5,
+                          "CO2" :  0.,
+                          "CH4" :  0.,
                           "CO"  :  0.,
                           "O2"  :  0.,
-                          "N2"  :  1.e+5,
-                          "H2"  :  0e+5,
+                          "N2"  :  0.,
+                          "H2"  :  0.
                         }
 
     # Stellar heating on/off
@@ -748,9 +750,20 @@ if __name__ == "__main__":
         print("TOA heating:", round(atm.toa_heating), "W/m^2")
 
     # Compute heat flux
-    atm_dry, atm_moist = RadConvEqm({"output": os.getcwd()+"/output", "rad_conv": os.getcwd()}, time, atm, [], [], standalone=True, cp_dry=True, trpp=True, calc_cf=calc_cf, rscatter=rscatter) 
+    atm_dry, atm_moist = RadConvEqm({"output": os.getcwd()+"/output", "rad_conv": os.getcwd()}, time, atm, [], [], standalone=True, cp_dry=True, trpp=False, calc_cf=calc_cf, rscatter=rscatter) 
 
     print(len(atm_moist.p))
 
     # Plot abundances w/ TP structure
     ga.plot_adiabats(atm_moist)
+
+    end = time.time()
+    print(end - start)
+
+    ClausiusClapeyron = [ga.Tdew('H2O',p) for p in atm_moist.p]
+
+    np.savetxt(f'data_{int(sum(vol_list.values()))}_{int(T_surf)}.dat',np.column_stack((atm_moist.pl,atm_moist.tmpl,atm_moist.SW_flux_up,atm_moist.LW_flux_up,atm_moist.SW_flux_down,atm_moist.LW_flux_down,atm_moist.SW_flux_net,atm_moist.LW_flux_net,atm_moist.flux_up_total,atm_moist.flux_down_total,atm_moist.net_flux)))
+
+    np.savetxt(f'data_heating_{int(sum(vol_list.values()))}_{int(T_surf)}.dat',np.column_stack((atm_moist.SW_heating,atm_moist.LW_heating,atm_moist.net_heating)))
+
+    np.savetxt(f'data_spectral_TOA_{int(sum(vol_list.values()))}_{int(T_surf)}.dat',np.column_stack((atm_moist.LW_spectral_flux_up[:,0],atm.SW_spectral_flux_up[:,0],atm.net_spectral_flux[:,0])))
