@@ -767,3 +767,5 @@ if __name__ == "__main__":
     np.savetxt(f'data_heating_{int(sum(vol_list.values()))}_{int(T_surf)}.dat',np.column_stack((atm_moist.SW_heating,atm_moist.LW_heating,atm_moist.net_heating)))
 
     np.savetxt(f'data_spectral_TOA_{int(sum(vol_list.values()))}_{int(T_surf)}.dat',np.column_stack((atm_moist.LW_spectral_flux_up[:,0],atm.SW_spectral_flux_up[:,0],atm.net_spectral_flux[:,0])))
+
+    np.savetxt(f'data_spectral_Surface_{int(P_surf)}_{int(T_surf)}.dat',np.column_stack((atm_moist.LW_spectral_flux_up[:,-1],atm.SW_spectral_flux_up[:,-1],atm.net_spectral_flux[:,-1])))

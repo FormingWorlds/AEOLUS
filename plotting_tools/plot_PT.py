@@ -3,6 +3,9 @@ import matplotlib.pyplot as pl
 import seaborn as sns
 from math import exp
 
+P_surf = 1e6
+T_surf = 1225.0
+
 L=2493000        # J/kg, latent heat of condensation of water vapor at 300K
 k = 1.38065812e-23
 N_avogadro = 6.022136736e+23
@@ -22,7 +25,7 @@ def Tdew(p): # Vapor-Liquid equilibrium temperature of water at pressure p<ps. A
     pref = satvps(Tref,H2O_TriplePointT,H2O_TriplePointP,H2O_MolecularWeight,L)
     return Tref/(1-(R*Tref/L)*np.log(p/pref)) # assumes a pure steam atmosphere
 
-data_output = "/network/group/aopp/planetary/RTP028_BOUKROUCHE_RUNAWAY2/soc-rad-conv-GJ357d/data_1000000_1225_correction.dat"
+data_output = f'/network/group/aopp/planetary/RTP028_BOUKROUCHE_RUNAWAY2/soc-rad-conv/data_{int(P_surf)}_{int(T_surf)}.dat'
 
 p_soc = np.loadtxt(data_output,usecols=0)
 T_soc = np.loadtxt(data_output,usecols=1)
@@ -39,17 +42,17 @@ total_up = np.loadtxt(data_output,usecols=8)
 total_down = np.loadtxt(data_output,usecols=9)
 total_net = np.loadtxt(data_output,usecols=10)
 
-data_output_dT = "/network/group/aopp/planetary/RTP028_BOUKROUCHE_RUNAWAY2/soc-rad-conv-GJ357d/data_heating_1000000_1225_correction.dat"
+data_output_dT = f'/network/group/aopp/planetary/RTP028_BOUKROUCHE_RUNAWAY2/soc-rad-conv/data_heating_{int(P_surf)}_{int(T_surf)}.dat'
 dTSW = np.loadtxt(data_output_dT,usecols=0)
 dTLW = np.loadtxt(data_output_dT,usecols=1)
 dTnet = np.loadtxt(data_output_dT,usecols=2)
 
-data_output_spectral_TOA = "/network/group/aopp/planetary/RTP028_BOUKROUCHE_RUNAWAY2/soc-rad-conv-GJ357d/data_spectral_TOA_1000000_1225_correction.dat"
+data_output_spectral_TOA = f'/network/group/aopp/planetary/RTP028_BOUKROUCHE_RUNAWAY2/soc-rad-conv/data_spectral_TOA_{int(P_surf)}_{int(T_surf)}.dat'
 diffuse_spectral_up_TOA = np.loadtxt(data_output_spectral_TOA,usecols=0)
 direct_spectral_up_TOA = np.loadtxt(data_output_spectral_TOA,usecols=1)
 net_spectral_TOA = np.loadtxt(data_output_spectral_TOA,usecols=2)
 
-data_output_spectral_surf = "/network/group/aopp/planetary/RTP028_BOUKROUCHE_RUNAWAY2/soc-rad-conv-GJ357d/data_spectral_Surface_1000000_1225_correction.dat"
+data_output_spectral_surf = f'/network/group/aopp/planetary/RTP028_BOUKROUCHE_RUNAWAY2/soc-rad-conv/data_spectral_Surface_{int(P_surf)}_{int(T_surf)}.dat'
 diffuse_spectral_up_surf = np.loadtxt(data_output_spectral_surf,usecols=0)
 direct_spectral_up_surf = np.loadtxt(data_output_spectral_surf,usecols=1)
 net_spectral_surf = np.loadtxt(data_output_spectral_surf,usecols=2)
@@ -389,7 +392,7 @@ ax2.set_xlabel(r'Flux, $F$ [W m$^{-2}$]')
 ax1.legend(frameon=True,loc='best')
 ax2.legend(frameon=True,loc='best')
 sns.despine(fig=None, ax=None, top=True, right=True, left=False, bottom=False, offset=None, trim=False)
-#fig.savefig('PT_flux_SOCRATES_correction_5steps.pdf',bbox_inches='tight')
+fig.savefig('PT_flux_SOCRATES.pdf',bbox_inches='tight')
 pl.show()
 #pl.close()
 
@@ -402,7 +405,7 @@ ax.set_xlabel(r'Wavelength, $\lambda$ [$\mathrm{\mu}$m]')
 ax.set_ylabel(r'TOA flux, $F$ [W m$^{-2}$]')
 ax.legend(frameon=True,loc='best')
 sns.despine(fig=None, ax=None, top=True, right=True, left=False, bottom=False, offset=None, trim=False)
-#fig.savefig('Spectral_flux_TOA_SOCRATES_correction.pdf',bbox_inches='tight')
+fig.savefig('Spectral_flux_TOA_SOCRATES.pdf',bbox_inches='tight')
 pl.show()
 #pl.close()
 
@@ -414,7 +417,7 @@ ax.set_xlabel(r'Wavelength, $\lambda$ [$\mathrm{\mu}$m]')
 ax.set_ylabel(r'Surface flux, $F$ [W m$^{-2}$]')
 ax.legend(frameon=True,loc='best')
 sns.despine(fig=None, ax=None, top=True, right=True, left=False, bottom=False, offset=None, trim=False)
-#fig.savefig('Spectral_flux_surf_SOCRATES_correction.pdf',bbox_inches='tight')
+fig.savefig('Spectral_flux_surf_SOCRATES.pdf',bbox_inches='tight')
 pl.show()
 #pl.close()
 
