@@ -660,6 +660,10 @@ def InterpolateStellarLuminosity(star_mass, time, mean_distance, albedo, Sfrac):
 
     # Mean flux averaged over surface area, W m-2
     toa_heating             = ( 1. - albedo ) * S_0 / 4.
+
+    # If the age is not known with enough accuracy, define the ISR manually
+    #L_star                  = 0.000553*L_sun                                           # Trappist-1 luminosity
+    #toa_heating             = ( 1. - 0. ) * (L_star/(4.*np.pi*(mean_distance*AU)**2.)) # Tidally-locked, zero albedo
    
     return toa_heating
 
