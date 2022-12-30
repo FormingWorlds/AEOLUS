@@ -1,5 +1,4 @@
-# This code plots the selected netCDF file. It requires the SOCRATES environment to access the module nctools from socrates_main/python/nctools.py
-
+# This code plots the selected netCDF file. It does not require the SOCRATES environment
 from netCDF4 import Dataset
 import numpy as np
 import matplotlib.pyplot as plt

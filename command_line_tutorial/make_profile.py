@@ -1,5 +1,5 @@
 # This standalone code generates netCDF input files for SOCRATES including a modifiable PT profile corresponding to a pure steam adiabatic column. 
-# It does not require the SOCRATES environment. 
+# It requires the SOCRATES environment to access the module nctools from socrates_main/python/nctools.py 
 
 import numpy as np
 import nctools
