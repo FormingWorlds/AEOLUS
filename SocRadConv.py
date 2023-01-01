@@ -71,7 +71,7 @@ def RadConvEqm(dirs, time, atm, loop_counter, COUPLER_options, standalone, cp_dr
     
     # Plot
     if standalone == True:
-        plot_flux_balance(atm_dry, atm_moist, cp_dry, time, dirs)
+        #plot_flux_balance(atm_dry, atm_moist, cp_dry, time, dirs)
         # Save to disk
         with open(dirs["output"]+"/"+str(int(time["planet"]))+"_atm.pkl", "wb") as atm_file: 
             pkl.dump(atm_moist, atm_file, protocol=pkl.HIGHEST_PROTOCOL)
@@ -333,7 +333,7 @@ def plot_flux_balance(atm_dry, atm_moist, cp_dry, time, dirs):
 def compute_dry_adiabat(atm, dirs, standalone, calc_cf=False, rscatter=False):
 
     # Dry adiabat settings 
-    rad_steps   = 10  # Maximum number of radiation steps
+    rad_steps   = 100  # Maximum number of radiation steps
     conv_steps  = 30   # Number of convective adjustment steps (per radiation step)
     dT_max      = 20.  # K, Maximum temperature change per radiation step
     T_floor     = 10.  # K, Temperature floor to prevent SOCRATES crash
@@ -710,7 +710,7 @@ if __name__ == "__main__":
     #             }
     
     # Partial pressure guesses
-    P_surf      = "calc"   
+    #P_surf      = "calc" # does not do anything  
      # Volatiles considered
     vol_list    = { 
                           "H2O" :  1.00e+6,
@@ -722,6 +722,8 @@ if __name__ == "__main__":
                           "N2"  :  0.,
                           "H2"  :  0.
                         }
+
+    P_surf      = sum(vol_list.values())
 
     # Stellar heating on/off
     stellar_heating = True
@@ -752,20 +754,24 @@ if __name__ == "__main__":
     # Compute heat flux
     atm_dry, atm_moist = RadConvEqm({"output": os.getcwd()+"/output", "rad_conv": os.getcwd()}, time, atm, [], [], standalone=True, cp_dry=True, trpp=False, calc_cf=calc_cf, rscatter=rscatter) 
 
-    print(len(atm_moist.p))
+    #print(len(atm_moist.p))
 
     # Plot abundances w/ TP structure
-    ga.plot_adiabats(atm_moist)
+    #ga.plot_adiabats(atm_moist)
 
     end = t.time()
     print(end - start)
 
-    ClausiusClapeyron = [ga.Tdew('H2O',p) for p in atm_moist.p]
+    ClausiusClapeyron = [ga.Tdew('H2O',p) for p in atm_dry.p]
 
-    np.savetxt(f'data_{int(sum(vol_list.values()))}_{int(T_surf)}.dat',np.column_stack((atm_moist.pl,atm_moist.tmpl,atm_moist.SW_flux_up,atm_moist.LW_flux_up,atm_moist.SW_flux_down,atm_moist.LW_flux_down,atm_moist.SW_flux_net,atm_moist.LW_flux_net,atm_moist.flux_up_total,atm_moist.flux_down_total,atm_moist.net_flux)))
+    atm_print = atm_dry # atm_moist
 
-    np.savetxt(f'data_heating_{int(sum(vol_list.values()))}_{int(T_surf)}.dat',np.column_stack((atm_moist.SW_heating,atm_moist.LW_heating,atm_moist.net_heating)))
+    print("OPR = ", atm_print.flux_up_total[0], "ASR = ", atm_print.flux_down_total[0], "ASR-OPR = ", atm_print.flux_down_total[0]-atm_print.flux_up_total[0])
 
-    np.savetxt(f'data_spectral_TOA_{int(sum(vol_list.values()))}_{int(T_surf)}.dat',np.column_stack((atm_moist.LW_spectral_flux_up[:,0],atm.SW_spectral_flux_up[:,0],atm.net_spectral_flux[:,0])))
+    np.savetxt(f'data_{int(P_surf)}_{int(T_surf)}.dat',np.column_stack((atm_print.pl,atm_print.tmpl,atm_print.SW_flux_up,atm_print.LW_flux_up,atm_print.SW_flux_down,atm_print.LW_flux_down,atm_print.SW_flux_net,atm_print.LW_flux_net,atm_print.flux_up_total,atm_print.flux_down_total,atm_print.net_flux)))
 
-    np.savetxt(f'data_spectral_Surface_{int(P_surf)}_{int(T_surf)}.dat',np.column_stack((atm_moist.LW_spectral_flux_up[:,-1],atm.SW_spectral_flux_up[:,-1],atm.net_spectral_flux[:,-1])))
+    np.savetxt(f'data_heating_{int(P_surf)}_{int(T_surf)}.dat',np.column_stack((atm_print.SW_heating,atm_print.LW_heating,atm_print.net_heating)))
+
+    np.savetxt(f'data_spectral_TOA_{int(P_surf)}_{int(T_surf)}.dat',np.column_stack((atm_print.LW_spectral_flux_up[:,0],atm_print.SW_spectral_flux_up[:,0],atm_print.net_spectral_flux[:,0])))
+
+    np.savetxt(f'data_spectral_Surface_{int(P_surf)}_{int(T_surf)}.dat',np.column_stack((atm_print.LW_spectral_flux_up[:,-1],atm_print.SW_spectral_flux_up[:,-1],atm_print.net_spectral_flux[:,-1])))
