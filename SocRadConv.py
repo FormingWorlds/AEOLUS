@@ -3,7 +3,8 @@ Created 28/01/19
 
 @authors:
 Mark Hammond (MH)
-Tim Lichtenberg (TL)
+Tim Lichtenberg (TL)   
+Ryan Boukrouche (RB)
 
 SOCRATES radiative-convective model
 '''
@@ -52,7 +53,7 @@ def surf_Planck_nu(atm):
     B   = (1.-atm.albedo_s) * np.pi * B * atm.band_widths/1000.0
     return B
 
-def RadConvEqm(dirs, time, atm, loop_counter, COUPLER_options, standalone, cp_dry, trpp, calc_cf, rscatter):
+def RadConvEqm(dirs, time, atm, loop_counter, COUPLER_options, standalone, cp_dry, trpp, calc_cf, rscatter, pure_steam_adj, surf_dt):
 
     ### Moist/general adiabat
     atm_moist = compute_moist_adiabat(atm, dirs, standalone, trpp, calc_cf, rscatter)
@@ -61,7 +62,7 @@ def RadConvEqm(dirs, time, atm, loop_counter, COUPLER_options, standalone, cp_dr
     if cp_dry == True:
 
         # Compute dry adiabat  w/ timestepping
-        atm_dry   = compute_dry_adiabat(atm, dirs, standalone, calc_cf, rscatter)
+        atm_dry   = compute_dry_adiabat(atm, dirs, standalone, calc_cf, rscatter, pure_steam_adj, surf_dt)
 
         if standalone == True:
             print("Net, OLR => moist:", str(round(atm_moist.net_flux[0], 3)), str(round(atm_moist.LW_flux_up[0], 3)) + " W/m^2", end=" ")
@@ -330,7 +331,7 @@ def plot_flux_balance(atm_dry, atm_moist, cp_dry, time, dirs):
     #     json.dump(json_atm, atm_file)
 
 # Time integration for n steps
-def compute_dry_adiabat(atm, dirs, standalone, calc_cf=False, rscatter=False):
+def compute_dry_adiabat(atm, dirs, standalone, calc_cf=False, rscatter=False, pure_steam_adj=False, surf_dt=False):
 
     # Dry adiabat settings 
     rad_steps   = 100  # Maximum number of radiation steps
@@ -348,6 +349,8 @@ def compute_dry_adiabat(atm, dirs, standalone, calc_cf=False, rscatter=False):
     PrevOLR_dry         = 0.
     PrevMaxHeat_dry     = 0.
     PrevTemp_dry        = atm.tmp * 0.
+    # Initialize the surface temperature tendency to 0 
+    dT_surf             = 0
 
     # Time stepping
     for i in range(0, rad_steps):
@@ -367,14 +370,19 @@ def compute_dry_adiabat(atm, dirs, standalone, calc_cf=False, rscatter=False):
             # Apply heating
             atm_dry.tmp     += dT_dry
 
-            pure_steam_adj = True
+            # Pure steam convective adjustment
             if pure_steam_adj:
                 dT_moist = moist_adj(atm_dry.tmp,atm_dry.p,atm_dry.pl,1000.)
                 atm_dry.tmp     += dT_moist
 
-            # # Do the surface balance
-            # kturb       = .1
-            # atm.tmp[-1] += -atm.dt * kturb * (atm.tmp[-1] - atm.ts)
+            # Do the surface balance (should be its own module)
+            if surf_dt:
+                k_turb          = .1
+                mix_coeff_atmos = 1.e6
+                mix_coeff_surf  = 1.e6
+                #dT_dry[-1] += (atm_dry.ts - atm_dry.tmp[-1])/mix_coeff_atmos
+                #dT_surf    -= (atm_dry.ts - atm_dry.tmp[-1])/mix_coeff_surf
+                #atm_dry.tmp[-1] += dT_dry[-1] * k_turb * (atm_dry.tmp[-1] - atm_dry.ts) 
             
             # Dry convective adjustment
             for iadj in range(conv_steps):
@@ -591,7 +599,7 @@ def set_stratosphere(atm):
 
     return atm
 
-def InterpolateStellarLuminosity(star_mass, time, mean_distance, albedo, Sfrac):
+def InterpolateStellarLuminosity(star_mass, time, mean_distance, albedo, Sfrac, custom_ISR=False):
 
     # Constants
     L_sun                   = 3.828e+26        # W, IAU definition
@@ -663,8 +671,9 @@ def InterpolateStellarLuminosity(star_mass, time, mean_distance, albedo, Sfrac):
     toa_heating             = ( 1. - albedo ) * S_0 / 4.
 
     # If the age is not known with enough accuracy, define the ISR manually
-    L_star                  = 0.000553*L_sun                                           # Trappist-1 luminosity
-    toa_heating             = ( 1. - 0. ) * (L_star/(4.*np.pi*(mean_distance*AU)**2.)) # Tidally-locked, zero albedo
+    if custom_ISR:
+        L_star                  = 0.000553*L_sun                                           # Trappist-1 luminosity
+        toa_heating             = ( 1. - 0. ) * (L_star/(4.*np.pi*(mean_distance*AU)**2.)) # Tidally-locked, zero albedo
    
     return toa_heating
 
@@ -734,6 +743,12 @@ if __name__ == "__main__":
     # Compute contribution function
     calc_cf = False
 
+    # Pure steam convective adjustment
+    pure_steam_adj = True
+
+    # Surface temperature time-stepping
+    surf_dt = True
+
     # Instellation scaling | 1.0 == no scaling
     Sfrac = 1.0
 
@@ -743,7 +758,7 @@ if __name__ == "__main__":
     atm            = atmos(T_surf, P_surf, vol_list, calc_cf=calc_cf)
 
     # Compute stellar heating
-    atm.toa_heating = InterpolateStellarLuminosity(star_mass, time, mean_distance, atm.albedo_pl, Sfrac)
+    atm.toa_heating = InterpolateStellarLuminosity(star_mass, time, mean_distance, atm.albedo_pl, Sfrac, True)
 
     # Set stellar heating on or off
     if stellar_heating == False: 
@@ -752,7 +767,7 @@ if __name__ == "__main__":
         print("TOA heating:", round(atm.toa_heating), "W/m^2")
 
     # Compute heat flux
-    atm_dry, atm_moist = RadConvEqm({"output": os.getcwd()+"/output", "rad_conv": os.getcwd()}, time, atm, [], [], standalone=True, cp_dry=True, trpp=False, calc_cf=calc_cf, rscatter=rscatter) 
+    atm_dry, atm_moist = RadConvEqm({"output": os.getcwd()+"/output", "rad_conv": os.getcwd()}, time, atm, [], [], standalone=True, cp_dry=True, trpp=False, calc_cf=calc_cf, rscatter=rscatter, pure_steam_adj=pure_steam_adj, surf_dt=surf_dt) 
 
     #print(len(atm_moist.p))
 
@@ -765,7 +780,7 @@ if __name__ == "__main__":
     ClausiusClapeyron = [ga.Tdew('H2O',p) for p in atm_dry.p]
 
     atm_print = atm_dry # atm_moist
-
+    print("TOA heating - atm_print:", round(atm_print.toa_heating), "W/m^2")
     print("OPR = ", atm_print.flux_up_total[0], "ASR = ", atm_print.flux_down_total[0], "ASR-OPR = ", atm_print.flux_down_total[0]-atm_print.flux_up_total[0])
 
     np.savetxt(f'data_{int(P_surf)}_{int(T_surf)}.dat',np.column_stack((atm_print.pl,atm_print.tmpl,atm_print.SW_flux_up,atm_print.LW_flux_up,atm_print.SW_flux_down,atm_print.LW_flux_down,atm_print.SW_flux_net,atm_print.LW_flux_net,atm_print.flux_up_total,atm_print.flux_down_total,atm_print.net_flux)))
