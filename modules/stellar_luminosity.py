@@ -43,8 +43,7 @@ def InterpolateStellarLuminosity(L_sun, AU, star_mass, time, mean_distance, albe
     else:
 
         # Find all luminosity tracks
-        lum_tracks = natural_sort(glob.glob(str(pathlib.Path(__file__).parent.absolute())+"/luminosity_tracks/"+"Lum_m*.txt"))
-
+        lum_tracks = natural_sort(glob.glob(str(pathlib.Path(__file__).parent.parent.absolute())+"/luminosity_tracks/"+"Lum_m*.txt"))
         # Define data arrays for interpolation later on
         xy_age_mass = []
         z_lum       = []

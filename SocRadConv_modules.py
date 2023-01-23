@@ -96,7 +96,7 @@ if __name__ == "__main__":
     stellar_heating = True
     
     # False: interpolate luminosity from age andm mass tables. True: define a custom instellation.
-    custom_ISR = True
+    custom_ISR = False
 
     # Rayleigh scattering on/off
     rscatter = True
