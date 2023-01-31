@@ -14,6 +14,9 @@ import pathlib
 import glob, re, os
 import numpy as np
 
+import sys
+np.set_printoptions(threshold=sys.maxsize)
+
 # String sorting not based on natsorted package
 def natural_sort(l): 
     convert = lambda text: int(text) if text.isdigit() else text.lower() 
@@ -78,10 +81,13 @@ def InterpolateStellarLuminosity(L_sun, AU, star_mass, time, mean_distance, albe
         # Interpolate the luminosity from the 2D grid
         #print("dimension of xi (time['star']/1e+6, star_mass) = ", np.shape((time["star"]/1e+6, star_mass)))
         interpolated_luminosity = interpolate.griddata(xy_age_mass, z_lum, (time["star"]/1e+6, star_mass), method='linear', rescale=True)
-
+        print("time['star'] = ", time["star"])
+        print("xy_age_mass = ", xy_age_mass)
+        print("z_lum = ", z_lum)
+        #print("interpolated_luminosity =", interpolated_luminosity)
     # Stellar constant, W m-2
     S_0    = interpolated_luminosity * L_sun / ( 4. * np.pi * (mean_distance*AU)**2. )
-
+    
     # Scale instellation by fixed fraction
     S_0    = S_0 * Sfrac
 

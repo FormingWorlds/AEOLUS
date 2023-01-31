@@ -96,7 +96,7 @@ if __name__ == "__main__":
     stellar_heating = True
     
     # False: interpolate luminosity from age andm mass tables. True: define a custom instellation.
-    custom_ISR = False
+    custom_ISR = True
 
     # Rayleigh scattering on/off
     rscatter = True
@@ -109,6 +109,10 @@ if __name__ == "__main__":
 
     # Surface temperature time-stepping
     surf_dt = True
+    # Options activated by surf_dt
+    cp_surf = 1e5         # Heat capacity of the ground [J.kg^-1.K^-1]
+    mix_coeff_atmos = 1e6 # mixing coefficient of the atmosphere [s]
+    mix_coeff_surf  = 1e6 # mixing coefficient at the surface [s]
 
     # Instellation scaling | 1.0 == no scaling
     Sfrac = 1.0
@@ -133,7 +137,7 @@ if __name__ == "__main__":
         print("TOA heating:", round(atm.toa_heating), "W/m^2")
         
     # Compute heat flux
-    atm_dry, atm_moist = RadConvEqm({"output": os.getcwd()+"/output", "rad_conv": os.getcwd()}, time, atm, [], [], standalone=True, cp_dry=True, trpp=False, calc_cf=calc_cf, rscatter=rscatter, pure_steam_adj=pure_steam_adj, surf_dt=surf_dt) 
+    atm_dry, atm_moist = RadConvEqm({"output": os.getcwd()+"/output", "rad_conv": os.getcwd()}, time, atm, [], [], standalone=True, cp_dry=True, trpp=False, calc_cf=calc_cf, rscatter=rscatter, pure_steam_adj=pure_steam_adj, surf_dt=surf_dt, cp_surf=cp_surf, mix_coeff_atmos=mix_coeff_atmos, mix_coeff_surf=mix_coeff_surf) 
     
     # Plot abundances w/ TP structure
     #ga.plot_adiabats(atm_moist)
