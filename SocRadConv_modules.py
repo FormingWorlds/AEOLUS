@@ -47,7 +47,7 @@ if __name__ == "__main__":
     time = { "planet": 0., "star": 4567e+6 } # yr,
     # time_current  = 0                 # yr, time after start of MO
     # time_offset   = 4567e+6           # yr, time relative to star formation
-    star_mass     = 0.08    #1.0                 # M_sun, mass of star
+    star_mass     = 0.1    #1.0                 # M_sun, mass of star
     mean_distance = 0.01154 #1.0                 # au, orbital distance
 
     # Surface pressure & temperature
@@ -96,7 +96,7 @@ if __name__ == "__main__":
     stellar_heating = True
     
     # False: interpolate luminosity from age andm mass tables. True: define a custom instellation.
-    custom_ISR = True
+    custom_ISR = False
 
     # Rayleigh scattering on/off
     rscatter = True
@@ -123,7 +123,7 @@ if __name__ == "__main__":
     atm            = atmos(T_surf, P_surf, vol_list, calc_cf=calc_cf)
 
     # Compute stellar heating
-    if custom_ISR: # If the age is not known with enough accuracy, define the ISR manually
+    if custom_ISR: # If the age is not known with enough accuracy or the mass is outside the range [0.1,1.4] solar masses, define the ISR manually
         L_star          = 0.000553*L_sun                                           # Trappist-1 luminosity
         atm.toa_heating = ( 1. - 0. ) * (L_star/(4.*np.pi*(mean_distance*AU)**2.)) # Tidally-locked, zero albedo
     else:
