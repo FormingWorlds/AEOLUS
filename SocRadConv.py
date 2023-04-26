@@ -88,7 +88,7 @@ if __name__ == "__main__":
     custom_ISR = False
 
     # Rayleigh scattering on/off
-    rscatter = True
+    rscatter = False
 
     # Compute contribution function
     calc_cf = False

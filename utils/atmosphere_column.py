@@ -59,7 +59,8 @@ class atmos:
         self.mixing_ratios 	= np.zeros([self.n_species,self.nlev])
         
         # self.bands 			= np.concatenate((np.arange(0,3000,20),np.arange(3000,9000,50),np.arange(9000,24500,500))) # cm
-        self.bands 			= np.concatenate((np.arange(0,3000,25),np.arange(3000,11000,50),np.arange(11000,30500,500))) # cm, 318 bands: HITEMP-compatible spacing
+        #self.bands 			= np.concatenate((np.arange(0,3000,25),np.arange(3000,11000,50),np.arange(11000,30500,500))) # cm, 318 bands: HITEMP-compatible spacing
+        self.bands 			= np.concatenate((np.arange(0,3000,500),np.arange(3000,11000,1000),np.arange(11000,30500,3000))) # cm, 20 bands
         
         self.band_centres 	= (self.bands[1:] + self.bands[:-1]) / 2
         self.band_widths 	= np.diff(self.bands)

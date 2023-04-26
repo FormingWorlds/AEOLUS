@@ -1,0 +1,14 @@
+#!/bin/bash
+
+#SBATCH --job-name=sp_20
+#SBATCH --output=sp.out
+#SBATCH --error=sp.err
+#SBATCH -t 168:00:00
+#SBATCH -A snic2022-1-1
+#SBATCH -n 16
+#SBATCH --mail-type=ALL
+
+module load netCDF/4.3.2-HDF5-1.8.12-nsc1-intel-2018.u1-bare
+source /home/x_ryabo/socrates_2211/socrates_main/set_rad_env
+
+python sp_gen_script.py

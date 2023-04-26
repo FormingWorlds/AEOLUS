@@ -45,13 +45,29 @@ def radCompSoc(atm, dirs, recalc, calc_cf=False, rscatter=False):
 
     # Define stellar spectrum to use, options:
     # Sun_t456Myr_kurucz_95 F2V_hd128167 M45_ADLeo Sun_t0_0Ga_claire_12 (t: 0.0 – 4.55)
-    star_name           = "Sun_t0_0Ga_claire_12"
+    #star_name           = "Sun_t0_0Ga_claire_12"
+    star_name           = "TRAPPIST_1"
     
-    # Define path to spectral file
-    spectral_base_name  = "sp_b318_HITRAN_a16"
-    spectral_name       = "sp_b318_HITRAN_a16"+"_"+star_name
-    spectral_dir        = dirs["rad_conv"]+"/spectral_files/"+spectral_base_name+"/"
-    spectral_file       = spectral_dir+spectral_name
+    # Number of bands
+    bands_no            = "20"
+
+    # Spectroscopic database
+    spec_database       = "HITRAN"
+
+    # Number of species
+    species_no          = "16"
+
+    # Define path to spectral files
+
+    lw_spectral_base_name  = "sp_b"+bands_no+"_"+spec_database+"_a"+species_no
+    lw_spectral_name       = "sp_b"+bands_no+"_"+spec_database+"_a"+species_no+"_"+star_name
+    lw_spectral_dir        = dirs["rad_conv"]+"/spectral_files/"+lw_spectral_base_name+"/"
+    lw_spectral_file       = lw_spectral_dir+lw_spectral_name
+
+    sw_spectral_base_name  = "sp_b"+bands_no+"_"+spec_database+"_a"+species_no+"_sw"
+    sw_spectral_name       = "sp_b"+bands_no+"_"+spec_database+"_a"+species_no+"_sw_"+star_name
+    sw_spectral_dir        = dirs["rad_conv"]+"/spectral_files/"+sw_spectral_base_name+"/"
+    sw_spectral_file       = sw_spectral_dir+sw_spectral_name
 
     # Rayleigh scattering for CO2
     if rscatter == True:
@@ -63,17 +79,17 @@ def radCompSoc(atm, dirs, recalc, calc_cf=False, rscatter=False):
             os.makedirs(scatter_dir)
 
         # New file
-        spectral_file = scatter_dir+spectral_name
+        sw_spectral_file = scatter_dir+sw_spectral_name
 
         # Copy if not there yet
-        if not os.path.isfile(spectral_file):
+        if not os.path.isfile(sw_spectral_file):
             print(">>> Copy non-scatter spectral file to:", scatter_dir)
-            for file in natural_sort(glob.glob(spectral_dir+"*")):
+            for file in natural_sort(glob.glob(sw_spectral_dir+"*")):
                 shutil.copy(file, scatter_dir+os.path.basename(file))
                 print(os.path.basename(file), end =" ")
 
         # Insert Rayleigh scattering into spectral file
-        RayleighSpectrum.rayleigh_coeff_adder(species_list = ['co2', 'h2o', 'n2'], mixing_ratio_list = [atm.x_gas["CO2"][-1], atm.x_gas["H2O"][-1], atm.x_gas["N2"][-1]], spectral_file_path=spectral_file,wavelength_dummy_file_path=scatter_dir+'wavelength_band_file.txt')
+        RayleighSpectrum.rayleigh_coeff_adder(species_list = ['co2', 'h2o', 'n2'], mixing_ratio_list = [atm.x_gas["CO2"][-1], atm.x_gas["H2O"][-1], atm.x_gas["N2"][-1]], spectral_file_path=sw_spectral_file,wavelength_dummy_file_path=scatter_dir+'wavelength_band_file.txt')
 
 
     # # Enable cf SOCRATES environment
@@ -151,13 +167,13 @@ def radCompSoc(atm, dirs, recalc, calc_cf=False, rscatter=False):
         scatter_flag = ""
 
     # Anchor spectral files and run SOCRATES
-    seq4 = ("Cl_run_cdf -B", basename,"-s", spectral_file, "-R 1", str(atm.nbands), " -ch ", str(atm.nbands), " -S -g 2 -C 5 -u", scatter_flag)
+    seq4 = ("Cl_run_cdf -B", basename,"-s", sw_spectral_file, "-R 1", str(atm.nbands), " -ch ", str(atm.nbands), " -S -g 2 -C 5 -u", scatter_flag)
     seq5 = ("fmove", basename,"currentsw")
-    seq6 = ("Cl_run_cdf -B", basename,"-s", spectral_file, "-R 1 ", str(atm.nbands), " -ch ", str(atm.nbands), " -I -g 2 -C 5 -u", scatter_flag)
+    seq6 = ("Cl_run_cdf -B", basename,"-s", lw_spectral_file, "-R 1 ", str(atm.nbands), " -ch ", str(atm.nbands), " -I -g 2 -C 5 -u", scatter_flag)
     seq7 = ("fmove", basename,"currentlw")
 
     if calc_cf == True:
-        seq8 = ("Cl_run_cdf -B", basename,"-s", spectral_file, "-R 1 ", str(atm.nbands), " -ch ", str(atm.nbands), " -I -g 2 -C 5 -u -ch 1", scatter_flag)
+        seq8 = ("Cl_run_cdf -B", basename,"-s", lw_spectral_file, "-R 1 ", str(atm.nbands), " -ch ", str(atm.nbands), " -I -g 2 -C 5 -u -ch 1", scatter_flag)
         seq9 = ("fmove", basename, "currentlw_cff")
 
     comline1 = s.join(seq4)
