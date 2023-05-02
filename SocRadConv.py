@@ -82,7 +82,7 @@ if __name__ == "__main__":
                         }
 
     # Stellar heating on/off
-    stellar_heating = True
+    stellar_heating = False
     
     # False: interpolate luminosity from age and mass tables. True: define a custom instellation.
     custom_ISR = False

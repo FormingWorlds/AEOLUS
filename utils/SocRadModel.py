@@ -59,15 +59,19 @@ def radCompSoc(atm, dirs, recalc, calc_cf=False, rscatter=False):
 
     # Define path to spectral files
 
-    lw_spectral_base_name  = "sp_b"+bands_no+"_"+spec_database+"_a"+species_no
-    lw_spectral_name       = "sp_b"+bands_no+"_"+spec_database+"_a"+species_no+"_"+star_name
-    lw_spectral_dir        = dirs["rad_conv"]+"/spectral_files/"+lw_spectral_base_name+"/"
-    lw_spectral_file       = lw_spectral_dir+lw_spectral_name
+    #lw_spectral_base_name  = "sp_b"+bands_no+"_"+spec_database+"_a"+species_no
+    #lw_spectral_name       = "sp_b"+bands_no+"_"+spec_database+"_a"+species_no+"_"+star_name
+    #lw_spectral_dir        = dirs["rad_conv"]+"/spectral_files/"+lw_spectral_base_name+"/"
+    #lw_spectral_file       = lw_spectral_dir+lw_spectral_name
 
-    sw_spectral_base_name  = "sp_b"+bands_no+"_"+spec_database+"_a"+species_no+"_sw"
-    sw_spectral_name       = "sp_b"+bands_no+"_"+spec_database+"_a"+species_no+"_sw_"+star_name
-    sw_spectral_dir        = dirs["rad_conv"]+"/spectral_files/"+sw_spectral_base_name+"/"
-    sw_spectral_file       = sw_spectral_dir+sw_spectral_name
+    lw_spectral_file       = "/proj/bolinc/users/x_ryabo/sp_b318_HITRAN_a16/sp_b318_HITRAN_a16_block6" 
+
+    #sw_spectral_base_name  = "sp_b"+bands_no+"_"+spec_database+"_a"+species_no+"_sw"
+    #sw_spectral_name       = "sp_b"+bands_no+"_"+spec_database+"_a"+species_no+"_sw_"+star_name
+    #sw_spectral_dir        = dirs["rad_conv"]+"/spectral_files/"+sw_spectral_base_name+"/"
+    #sw_spectral_file       = sw_spectral_dir+sw_spectral_name
+
+    sw_spectral_file       = "/proj/bolinc/users/x_ryabo/sp_b318_HITRAN_a16/sp_b318_HITRAN_a16_block6" 
 
     # Rayleigh scattering for CO2
     if rscatter == True:
