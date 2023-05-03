@@ -45,11 +45,11 @@ def radCompSoc(atm, dirs, recalc, calc_cf=False, rscatter=False):
 
     # Define stellar spectrum to use, options:
     # Sun_t456Myr_kurucz_95 F2V_hd128167 M45_ADLeo Sun_t0_0Ga_claire_12 (t: 0.0 – 4.55)
-    #star_name           = "Sun_t0_0Ga_claire_12"
-    star_name           = "TRAPPIST_1"
+    star_name           = "Sun_t0_0Ga_claire_12"
+    #star_name           = "TRAPPIST_1"
     
     # Number of bands
-    bands_no            = "20"
+    bands_no            = "318"
 
     # Spectroscopic database
     spec_database       = "HITRAN"
@@ -64,14 +64,15 @@ def radCompSoc(atm, dirs, recalc, calc_cf=False, rscatter=False):
     #lw_spectral_dir        = dirs["rad_conv"]+"/spectral_files/"+lw_spectral_base_name+"/"
     #lw_spectral_file       = lw_spectral_dir+lw_spectral_name
 
-    lw_spectral_file       = "/proj/bolinc/users/x_ryabo/sp_b318_HITRAN_a16/sp_b318_HITRAN_a16_block6" 
+    lw_spectral_file       = "/proj/bolinc/users/x_ryabo/sp_b20_HITRAN_a16_test/sp_b20_HITRAN_a16_test_TRAPPIST_1" 
 
-    #sw_spectral_base_name  = "sp_b"+bands_no+"_"+spec_database+"_a"+species_no+"_sw"
-    #sw_spectral_name       = "sp_b"+bands_no+"_"+spec_database+"_a"+species_no+"_sw_"+star_name
+    #sw_spectral_base_name  = "sp_b"+bands_no+"_"+spec_database+"_a"+species_no#+"_sw"
+    ##sw_spectral_name       = "sp_b"+bands_no+"_"+spec_database+"_a"+species_no+"_sw_"+star_name
+    #sw_spectral_name       = "sp_b"+bands_no+"_"+spec_database+"_a"+species_no+"_"+star_name
     #sw_spectral_dir        = dirs["rad_conv"]+"/spectral_files/"+sw_spectral_base_name+"/"
     #sw_spectral_file       = sw_spectral_dir+sw_spectral_name
 
-    sw_spectral_file       = "/proj/bolinc/users/x_ryabo/sp_b318_HITRAN_a16/sp_b318_HITRAN_a16_block6" 
+    sw_spectral_file       = "/proj/bolinc/users/x_ryabo/sp_b20_HITRAN_a16_test/sp_b20_HITRAN_a16_test_TRAPPIST_1" 
 
     # Rayleigh scattering for CO2
     if rscatter == True:
