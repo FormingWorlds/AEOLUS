@@ -1,1 +1,0 @@
-Ccorr_k -F pt_file -D /proj/bolinc/users/x_anfey/spectral_files/dat_hitran/h2o_data.par -R 1 318 -c 3000.0 -i 0.1 -l 1 1.0e1 -b 1.5e-3 -s sp_b318_ExoMol +p -n 20 -lk -k -o output_HITRAN_k20 -m h2o_l318_lm_k20 -L h2o_lbl_lwf_pt48_k20.nc -sm h2o_l318_1-318map_k20.nc -np 1

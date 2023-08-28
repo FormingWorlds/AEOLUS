@@ -1,1 +1,0 @@
-Ccorr_k -s sp_b318_ExoMol -R 1 318 -F pt_file -r ref_pt_file -b 1.5e-3 -l 1 1.0e1 -n 20 -lk +p -o output_ExoMol_k20_2306 -m monitoring_ExoMol_k20_2306 -L 1H2-16O_ExoMol.nc -np 1
