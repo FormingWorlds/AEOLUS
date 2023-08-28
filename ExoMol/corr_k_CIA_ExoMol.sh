@@ -1,0 +1,1 @@
+Ccorr_k -F pt_cia -D /proj/bolinc/users/x_anfey/spectral_files/dat_hitran/h2o_data.par -R 1 318 -c 2500.0 -i 10.0 -ct 1 1 10.0 -t 1.0e-3 -e /proj/bolinc/users/x_anfey/spectral_files/dat_continua/mt_ckd_v3.0_s296 /proj/bolinc/users/x_anfey/spectral_files/dat_continua/mt_ckd_v3.0_s260 -k -s sp_b318_HITRAN +p -lk -o h2o-h2o_lc_HITRAN -m h2o-h2o_lcm_HITRAN -L 1H2-16O_HITRAN_CIA.nc
