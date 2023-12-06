@@ -17,7 +17,7 @@ from modules.compute_moist_adiabat import compute_moist_adiabat
 from modules.dry_adiabat_timestep import compute_dry_adiabat
 from utils.atmosphere_column import atmos
 
-def RadConvEqm(dirs, time, atm, standalone:bool, cp_dry:bool, trppD:bool, calc_cf:bool, rscatter:bool, 
+def RadConvEqm(dirs, time, atm, standalone:bool, cp_dry:bool, trppD:bool, calc_cf:bool, rscatter:bool, do_cloud:bool, 
                pure_steam_adj=False, surf_dt=False, cp_surf=1e5, mix_coeff_atmos=1e6, mix_coeff_surf=1e6):
     """Sets the atmosphere to a temperature profile using the general adiabat. 
     
@@ -39,6 +39,10 @@ def RadConvEqm(dirs, time, atm, standalone:bool, cp_dry:bool, trppD:bool, calc_c
             Calculate tropopause dynamically?
         calc_cf : bool
             Calculate contribution function?
+        rscatter : bool
+            Include Rayleigh scattering
+        do_cloud : bool
+            Include cloud radiation
         pure_steam_adj : bool
             Use pure steam adjustment?
         surf_dt : float
@@ -54,13 +58,13 @@ def RadConvEqm(dirs, time, atm, standalone:bool, cp_dry:bool, trppD:bool, calc_c
 
     ### Moist/general adiabat
 
-    atm_moist = compute_moist_adiabat(atm, dirs, standalone, trppD, calc_cf, rscatter)
+    atm_moist = compute_moist_adiabat(atm, dirs, standalone, trppD, calc_cf, rscatter, do_cloud)
 
     ### Dry adiabat
     if cp_dry == True:
 
         # Compute dry adiabat  w/ timestepping
-        atm_dry   = compute_dry_adiabat(atm, dirs, standalone, calc_cf, rscatter, pure_steam_adj, surf_dt, cp_surf, mix_coeff_atmos, mix_coeff_surf)
+        atm_dry   = compute_dry_adiabat(atm, dirs, standalone, calc_cf, rscatter, pure_steam_adj, surf_dt, cp_surf, mix_coeff_atmos, mix_coeff_surf, do_cloud)
 
         if standalone == True:
             print("Net, OLR => moist:", str(round(atm_moist.net_flux[0], 3)), str(round(atm_moist.LW_flux_up[0], 3)) + " W/m^2", end=" ")

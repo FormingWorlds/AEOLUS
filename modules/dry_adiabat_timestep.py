@@ -15,13 +15,14 @@ from modules.dry_adiabat_setup import dry_adiabat_atm
 from modules.moist_adjustment_H2O import moist_adj
 from modules.dry_adjustment import DryAdj
 from modules.simple_boundary import simple_boundary_tend
+from modules.water_cloud import simple_cloud
 
 import utils.GeneralAdiabat as ga # Moist adiabat with multiple condensibles
 import utils.socrates as socrates
 import utils.phys as phys
 
 # Time integration for n steps
-def compute_dry_adiabat(atm, dirs, standalone, calc_cf=False, rscatter=False, pure_steam_adj=False, surf_dt=False, cp_surf=1e5, mix_coeff_atmos=1e6, mix_coeff_surf=1e6):
+def compute_dry_adiabat(atm, dirs, standalone, calc_cf=False, rscatter=False, pure_steam_adj=False, surf_dt=False, cp_surf=1e5, mix_coeff_atmos=1e6, mix_coeff_surf=1e6, do_cloud=False):
 
     # Dry adiabat settings 
     rad_steps   = 100  # Maximum number of radiation steps
@@ -49,7 +50,9 @@ def compute_dry_adiabat(atm, dirs, standalone, calc_cf=False, rscatter=False, pu
 
         # Compute radiation, midpoint method time stepping
         try:
-            atm_dry         = socrates.radCompSoc(atm_dry, dirs, recalc=False, calc_cf=calc_cf, rscatter=rscatter)
+            if do_cloud:
+                atm_dry         = simple_cloud(atm_dry) # Before radiation, set up the cloud for Socrates using the current PT profile
+            atm_dry         = socrates.radCompSoc(atm_dry, dirs, recalc=False, calc_cf=calc_cf, rscatter=rscatter, do_cloud=do_cloud)
             dT_dry          = atm_dry.net_heating * atm_dry.dt
     
             # Limit the temperature change per step

@@ -105,6 +105,13 @@ if __name__ == "__main__":
     mix_coeff_atmos = 1e6 # mixing coefficient of the atmosphere [s]
     mix_coeff_surf  = 1e6 # mixing coefficient at the surface [s]
 
+    # Cloud radiation
+    do_cloud = True
+    # Options activated by do_cloud
+    re   = 1.0e-5 # Effective radius of the droplets [m] (drizzle forms above 20 microns)
+    lwm  = 0.8    # Liquid water mass fraction [kg/kg] - how much liquid vs. gas is there upon cloud formation? 0 : saturated water vapor does not turn liquid ; 1 : the entire mass of the cell contributes to the cloud
+    clfr = 1.0    # Water cloud fraction - how much of the current cell turns into cloud? 0 : clear sky cell ; 1 : the cloud takes over the entire area of the cell (just leave at 1 for 1D runs)
+
     # Instellation scaling | 1.0 == no scaling
     Sfrac = 1.0
 
@@ -122,8 +129,8 @@ if __name__ == "__main__":
     os.mkdir(dirs["output"])
 
     # Create atmosphere object
-    atm = atmos(T_surf, P_surf, P_top, pl_radius, pl_mass, 
-                vol_mixing=vol_mixing, vol_partial=vol_partial, calc_cf=calc_cf, trppT=trppT, req_levels=100, water_lookup=water_lookup)
+    atm = atmos(T_surf, P_surf, P_top, pl_radius, pl_mass, re, lwm, clfr,
+                vol_mixing=vol_mixing, vol_partial=vol_partial, calc_cf=calc_cf, trppT=trppT, req_levels=100, water_lookup=water_lookup, do_cloud=do_cloud)
 
     # Set stellar heating on or off
     if stellar_heating == False: 
@@ -136,13 +143,13 @@ if __name__ == "__main__":
     print("Inserting stellar spectrum")
 
     StellarSpectrum.InsertStellarSpectrum(
-        dirs["aeolus"]+"/spectral_files/Reach/Reach",
+        dirs["aeolus"]+"/spectral_files/Reach/Reach_cloud/Reach",
         dirs["aeolus"]+"/spectral_files/stellar_spectra/Sun_t4_4Ga_claire_12.txt",
         dirs["output"]+"runtime_spectral_file"
     )
 
     # Set up atmosphere with general adiabat
-    atm_dry, atm = RadConvEqm(dirs, time, atm, standalone=True, cp_dry=cp_dry, trppD=trppD, calc_cf=calc_cf, rscatter=rscatter, pure_steam_adj=pure_steam_adj, surf_dt=surf_dt, cp_surf=cp_surf, mix_coeff_atmos=mix_coeff_atmos, mix_coeff_surf=mix_coeff_surf) 
+    atm_dry, atm = RadConvEqm(dirs, time, atm, standalone=True, cp_dry=cp_dry, trppD=trppD, calc_cf=calc_cf, rscatter=rscatter, do_cloud=do_cloud, pure_steam_adj=pure_steam_adj, surf_dt=surf_dt, cp_surf=cp_surf, mix_coeff_atmos=mix_coeff_atmos, mix_coeff_surf=mix_coeff_surf) 
 
     # Plot abundances w/ TP structure
     if (cp_dry):

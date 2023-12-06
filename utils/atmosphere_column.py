@@ -9,10 +9,10 @@ import os
 
 class atmos:
     
-    def __init__(self, T_surf: float, P_surf: float, P_top: float, pl_radius: float, pl_mass: float, 
+    def __init__(self, T_surf: float, P_surf: float, P_top: float, pl_radius: float, pl_mass: float, re: float, lwm: float, clfr: float,
                  vol_mixing: dict = {}, vol_partial: dict = {}, 
                  calc_cf: bool=False, req_levels: int = 100, water_lookup: bool=False,
-                 trppT: float = 290.0, minT: float = 1.0, maxT: float = 9000.0):
+                 trppT: float = 290.0, minT: float = 1.0, maxT: float = 9000.0, do_cloud: bool=False):
         
         """Atmosphere class    
     
@@ -34,6 +34,12 @@ class atmos:
                 Radius of rocky part of planet [m]
             pl_mass : float
                 Mass of rocky part of planet [kg]
+            re : float
+                Effective radius of cloud droplets [m]
+            lwm : float
+                Liquid water mass fraction [kg/kg]
+            clfr : float
+                Water cloud fraction [adimensional]
 
             vol_mixing : dict
                 Dictionary of volatiles (keys) and mixing ratios (values)
@@ -197,6 +203,30 @@ class atmos:
             self.cff_i					= np.zeros([self.nbands,self.nlev]) # cf per band
             self.LW_flux_up_i 			= np.zeros([self.nbands,self.nlev])
 
+        # Cloud flags (socrates/bin/rad_pcf.f90) and input arrays
+        if do_cloud == True:            
+            self.cloud_scheme 			= 2	# -C 2 = ip_cloud_mix_max : maximum/random overlap in a mixed column 
+            self.cloud_representation   = 1 # -K 1 = ip_cloud_homogen : ice and water mixed homogeneously 
+            self.droplet_type           = 5 # -d 5 
+            # The below three variables should be zero until a cloud scheme forms clouds
+            self.re                     = np.zeros(self.nlev_save) # Effective radius of the droplets [m]
+            self.lwm                    = np.zeros(self.nlev_save) # Liquid water mass fraction [kg/kg]
+            self.clfr                   = np.zeros(self.nlev_save) # Water cloud fraction
+            # Floats defined in SocRadConv and used in the cloud scheme
+            self.effective_radius       = re
+            self.liquid_water_fraction  = lwm
+            self.cloud_fraction         = clfr
+        else:
+            self.cloud_scheme 			= 5 # -C 5 = ip_cloud_off : clear sky. Other flags will be ignored. In principle we shouldn't need to define the variables below in this case.
+            self.cloud_representation   = 1 
+            self.droplet_type           = 5  
+            self.re                     = np.zeros(self.nlev_save)
+            self.lwm                    = np.zeros(self.nlev_save)
+            self.clfr                   = np.zeros(self.nlev_save) 
+            self.effective_radius       = 0.0
+            self.liquid_water_fraction  = 0.0
+            self.cloud_fraction         = 0.0
+
 
 
     def write_PT(self,filename: str="output/PT.tsv", punit:str = "Pa"):
@@ -273,10 +303,11 @@ class atmos:
 
         # ----------------------
         # Create dimensions
-        ds.createDimension('nlev_c', nlev_c)    # Cell centres
-        ds.createDimension('nlev_l', nlev_l)    # Cell edges
-        ds.createDimension('ngases', ngases)    # Gases
-        ds.createDimension('nchars', nchars)    # Length of string containing gas names
+        ds.createDimension('nlev_c', nlev_c)      # Cell centres
+        ds.createDimension('nlev_l', nlev_l)      # Cell edges
+        ds.createDimension('ngases', ngases)      # Gases
+        ds.createDimension('nchars', nchars)      # Length of string containing gas names
+        ds.createDimension('nbands', self.nbands) # Number of bands in the spectral file
 
         # ----------------------
         # Scalar quantities  
@@ -292,26 +323,28 @@ class atmos:
         # ----------------------
         # Layer quantities  
         #    Create variables
-        var_p =         ds.createVariable('p',      'f4', dimensions=('nlev_c'));           var_p.units = "Pa"
-        var_pl =        ds.createVariable('pl',     'f4', dimensions=('nlev_l'));           var_pl.units = "Pa"
-        var_tmp =       ds.createVariable('tmp',    'f4', dimensions=('nlev_c'));           var_tmp.units = "K"
-        var_tmpl =      ds.createVariable('tmpl',   'f4', dimensions=('nlev_l'));           var_tmpl.units = "K"
-        var_z =         ds.createVariable('z',      'f4', dimensions=('nlev_c'));           var_z.units = "m"
-        var_zl =        ds.createVariable('zl',     'f4', dimensions=('nlev_l'));           var_zl.units = "m"
-        var_grav =      ds.createVariable('gravity','f4', dimensions=('nlev_c'));           var_grav.units = "m s-2"
-        var_mmw =       ds.createVariable('mmw',    'f4', dimensions=('nlev_c'));           var_mmw.units = "kg mol-1"
-        var_gases =     ds.createVariable('gases',  'S1', dimensions=('ngases', 'nchars'))  # Names of gases
-        var_mr =        ds.createVariable('x_gas',  'f4', dimensions=('nlev_c', 'ngases'))  # Mixing ratios per level
-        var_fdl =       ds.createVariable('fl_D_LW','f4', dimensions=('nlev_l'));           var_fdl.units = "W m-2"
-        var_ful =       ds.createVariable('fl_U_LW','f4', dimensions=('nlev_l'));           var_ful.units = "W m-2"
-        var_fnl =       ds.createVariable('fl_N_LW','f4', dimensions=('nlev_l'));           var_fnl.units = "W m-2"
-        var_fds =       ds.createVariable('fl_D_SW','f4', dimensions=('nlev_l'));           var_fds.units = "W m-2"
-        var_fus =       ds.createVariable('fl_U_SW','f4', dimensions=('nlev_l'));           var_fus.units = "W m-2"
-        var_fns =       ds.createVariable('fl_N_SW','f4', dimensions=('nlev_l'));           var_fns.units = "W m-2"
-        var_fd =        ds.createVariable('fl_D',   'f4', dimensions=('nlev_l'));           var_fd.units = "W m-2"
-        var_fu =        ds.createVariable('fl_U',   'f4', dimensions=('nlev_l'));           var_fu.units = "W m-2"
-        var_fn =        ds.createVariable('fl_N',   'f4', dimensions=('nlev_l'));           var_fn.units = "W m-2"
-        var_hr =        ds.createVariable('rad_hr', 'f4', dimensions=('nlev_c'));           var_hr.units = "K day-1"
+        var_p =         ds.createVariable('p',       'f4', dimensions=('nlev_c'));           var_p.units = "Pa"
+        var_pl =        ds.createVariable('pl',      'f4', dimensions=('nlev_l'));           var_pl.units = "Pa"
+        var_tmp =       ds.createVariable('tmp',     'f4', dimensions=('nlev_c'));           var_tmp.units = "K"
+        var_tmpl =      ds.createVariable('tmpl',    'f4', dimensions=('nlev_l'));           var_tmpl.units = "K"
+        var_z =         ds.createVariable('z',       'f4', dimensions=('nlev_c'));           var_z.units = "m"
+        var_zl =        ds.createVariable('zl',      'f4', dimensions=('nlev_l'));           var_zl.units = "m"
+        var_grav =      ds.createVariable('gravity', 'f4', dimensions=('nlev_c'));           var_grav.units = "m s-2"
+        var_mmw =       ds.createVariable('mmw',     'f4', dimensions=('nlev_c'));           var_mmw.units = "kg mol-1"
+        var_gases =     ds.createVariable('gases',   'S1', dimensions=('ngases', 'nchars'))  # Names of gases
+        var_mr =        ds.createVariable('x_gas',   'f4', dimensions=('nlev_c', 'ngases'))  # Mixing ratios per level
+        var_fdl =       ds.createVariable('fl_D_LW', 'f4', dimensions=('nlev_l'));           var_fdl.units = "W m-2"
+        var_ful =       ds.createVariable('fl_U_LW', 'f4', dimensions=('nlev_l'));           var_ful.units = "W m-2"
+        var_fnl =       ds.createVariable('fl_N_LW', 'f4', dimensions=('nlev_l'));           var_fnl.units = "W m-2"
+        var_fds =       ds.createVariable('fl_D_SW', 'f4', dimensions=('nlev_l'));           var_fds.units = "W m-2"
+        var_fus =       ds.createVariable('fl_U_SW', 'f4', dimensions=('nlev_l'));           var_fus.units = "W m-2"
+        var_fns =       ds.createVariable('fl_N_SW', 'f4', dimensions=('nlev_l'));           var_fns.units = "W m-2"
+        var_fd =        ds.createVariable('fl_D',    'f4', dimensions=('nlev_l'));           var_fd.units = "W m-2"
+        var_fu =        ds.createVariable('fl_U',    'f4', dimensions=('nlev_l'));           var_fu.units = "W m-2"
+        var_fn =        ds.createVariable('fl_N',    'f4', dimensions=('nlev_l'));           var_fn.units = "W m-2"
+        var_hr =        ds.createVariable('rad_hr',  'f4', dimensions=('nlev_c'));           var_hr.units = "K day-1"
+        var_sful =      ds.createVariable('Sfl_U_LW','f4', dimensions=('nbands', 'nlev_l')); var_sful.units = "W m-2 m-1"
+        var_sfus =      ds.createVariable('Sfl_U_SW','f4', dimensions=('nbands', 'nlev_l')); var_sfus.units = "W m-2 m-1"
 
         #     Store data
         var_p[:] =      self.p[:]
@@ -339,6 +372,9 @@ class atmos:
         var_fn[:] =     self.net_flux[:]
 
         var_hr[:] =     self.net_heating[:]
+
+        var_sful[:,:] = self.LW_spectral_flux_up[:,:]
+        var_sfus[:,:] = self.SW_spectral_flux_up[:,:]
 
         # ----------------------
         # Close

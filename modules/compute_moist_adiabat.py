@@ -11,11 +11,12 @@ Ryan Boukrouche (RB)
 import copy
 from modules.find_tropopause import find_tropopause
 from modules.set_stratosphere import set_stratosphere
+from modules.water_cloud import simple_cloud
 
 import utils.GeneralAdiabat as ga # Moist adiabat with multiple condensibles
 import utils.socrates as socrates
 
-def compute_moist_adiabat(atm, dirs, standalone, trppD, calc_cf=False, rscatter=False):
+def compute_moist_adiabat(atm, dirs, standalone, trppD, calc_cf=False, rscatter=False, do_cloud=False):
     """Compute moist adiabat case
 
     Parameters
@@ -40,8 +41,11 @@ def compute_moist_adiabat(atm, dirs, standalone, trppD, calc_cf=False, rscatter=
     # Build general adiabat structure
     atm_moist = ga.general_adiabat(atm_moist)
 
+    if do_cloud:
+        atm_moist = simple_cloud(atm_moist) # Before radiation, set up the cloud for Socrates using the current PT profile
+
     # Run SOCRATES
-    atm_moist = socrates.radCompSoc(atm_moist, dirs, recalc=False, calc_cf=calc_cf, rscatter=rscatter)
+    atm_moist = socrates.radCompSoc(atm_moist, dirs, recalc=False, calc_cf=calc_cf, rscatter=rscatter, do_cloud=do_cloud)
 
     if standalone == True:
         print("w/o stratosphere (net, OLR):", str(round(atm_moist.net_flux[0], 3)), str(round(atm_moist.LW_flux_up[0], 3)), "W/m^2")
@@ -55,8 +59,10 @@ def compute_moist_adiabat(atm, dirs, standalone, trppD, calc_cf=False, rscatter=
         # Reset stratosphere temperature and abundance levels
         atm_moist = set_stratosphere(atm_moist)
 
+        if do_cloud:
+            atm_moist = simple_cloud(atm_moist) # Update cloud location after previous PT changes
         # Recalculate fluxes w/ new atmosphere structure
-        atm_moist = socrates.radCompSoc(atm_moist, dirs, recalc=True, calc_cf=calc_cf, rscatter=rscatter)
+        atm_moist = socrates.radCompSoc(atm_moist, dirs, recalc=True, calc_cf=calc_cf, rscatter=rscatter, do_cloud=do_cloud)
 
         if standalone == True:
             print("w/ stratosphere (net, OLR):", str(round(atm_moist.net_flux[0], 3)), str(round(atm_moist.LW_flux_up[0], 3)), "W/m^2")

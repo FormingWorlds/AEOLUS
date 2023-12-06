@@ -1,0 +1,15 @@
+#
+# Pathnames for Tetralith
+#
+FORTCOMP        = mpiifort -O -c
+LINK            = mpiifort -O
+LIBLINK         = ar rvu
+INCCDF_PATH     = ${NETCDF_DIR}/include
+LIBCDF_PATH     = ${NETCDF_DIR}/lib
+LIBCDF_NAME     = netcdf -lnetcdff
+OMPARG          = -qopenmp
+
+LIBSUFFIX       = a
+
+.SUFFIXES: $(SUFFIXES) .f90
+

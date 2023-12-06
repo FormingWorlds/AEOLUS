@@ -19,7 +19,7 @@ import utils.phys as phys
 
 
 def radCompSoc(atm, dirs, recalc, calc_cf=False, rscatter=False,
-               rewrite_cfg=True, rewrite_tmp=True, rewrite_gas=True):
+               rewrite_cfg=True, rewrite_tmp=True, rewrite_gas=True, do_cloud=False):
     """Runs SOCRATES to calculate fluxes and heating rates
 
     Parameters
@@ -137,6 +137,18 @@ def radCompSoc(atm, dirs, recalc, calc_cf=False, rscatter=False,
     fthis = basename+'.q'
     if check_gas(fthis): nctools.ncout3d(   fthis, 0, 0,   atm.p,  phys.molar_mass['H2O'] / atm.mu * atm.x_gas["H2O"], 'q', longname="q", units='kg/kg') 
 
+    # Clouds
+    if do_cloud:
+        fthis = basename+'.re'
+        if check_tmp(fthis): nctools.ncout3d(   fthis, 0, 0,   atm.p,  atm.re, 're', longname="Effective Radius", units='M') 
+
+        fthis = basename+'.lwm'
+        if check_tmp(fthis): nctools.ncout3d(   fthis, 0, 0,   atm.p,  atm.lwm, 'lwm', longname="Liquid Water Mass Fraction", units='GG-1') 
+
+        fthis = basename+'.clfr'
+        if check_tmp(fthis): nctools.ncout3d(   fthis, 0, 0,   atm.p,  atm.clfr, 'clfr', longname="Cloud Fraction", units='NONE') 
+
+
     allowed_vols = {"CO2", "O3", "N2O", "CO", "CH4", "O2", "NO", "SO2", "NO2", "NH3", "HNO3", "N2", "H2", "He", "OCS"}
     for vol in atm.vol_list.keys():
         if vol in allowed_vols:
@@ -146,14 +158,14 @@ def radCompSoc(atm, dirs, recalc, calc_cf=False, rscatter=False,
                 nctools.ncout3d(basename+'.'+vol_lower, 0, 0, atm.p,  phys.molar_mass[vol] / atm.mu * atm.x_gas[vol], vol_lower, longname=vol, units='kg/kg') 
 
     # Call sequences for run SOCRATES + move data
-    seq_sw_ex = ["Cl_run_cdf","-B", basename,"-s", spectral_file, "-R 1", str(atm.nbands), " -ch ", str(atm.nbands), " -S -g 2 -C 5 -u", scatter_flag]
+    seq_sw_ex = ["Cl_run_cdf","-B", basename,"-s", spectral_file, "-R 1", str(atm.nbands), " -ch ", str(atm.nbands), " -S -g 2 -C ", str(atm.cloud_scheme), " -K ", str(atm.cloud_representation), " -d ", str(atm.droplet_type), " -u", scatter_flag, " -o"]
     seq_sw_mv = ["fmove", basename,"currentsw"]
     
-    seq_lw_ex = ["Cl_run_cdf","-B", basename,"-s", spectral_file, "-R 1", str(atm.nbands), " -ch ", str(atm.nbands), " -I -g 2 -C 5 -u", scatter_flag]
+    seq_lw_ex = ["Cl_run_cdf","-B", basename,"-s", spectral_file, "-R 1", str(atm.nbands), " -ch ", str(atm.nbands), " -I -g 2 -C ", str(atm.cloud_scheme), " -K ", str(atm.cloud_representation), " -d ", str(atm.droplet_type), " -u", scatter_flag, " -o"]
     seq_lw_mv = ["fmove", basename,"currentlw"]
 
     if calc_cf == True:
-        seq8 = ("Cl_run_cdf -B", basename,"-s", spectral_file, "-R 1 ", str(atm.nbands), " -ch ", str(atm.nbands), " -I -g 2 -C 5 -u -ch 1", scatter_flag)
+        seq8 = ("Cl_run_cdf -B", basename,"-s", spectral_file, "-R 1 ", str(atm.nbands), " -ch ", str(atm.nbands), " -I -g 2 -C ", str(atm.cloud_scheme), " -K ", str(atm.cloud_representation), " -d ", str(atm.droplet_type), " -u -ch 1", scatter_flag, " -o")
         seq9 = ("fmove", basename, "currentlw_cff")
 
     # Write namelist file?
