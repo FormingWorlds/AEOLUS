@@ -93,7 +93,7 @@ class atmos:
         self.vol_list["H2O"] = np.max( [ self.vol_list["H2O"], 1e-30 ] )
 
         # Initialise other variables
-        self.alpha_cloud 	= 0.0 	    	# The fraction of condensate retained in the column; 1 -> Li et al 2018; 0 -> full rainout
+        self.alpha_cloud 	= 1.0 	    	# The fraction of condensate retained in the column; 1 -> Li et al 2018; 0 -> full rainout
         
         self.ts 			= T_surf		# Surface temperature, K
 
@@ -314,11 +314,14 @@ class atmos:
         #    Create variables
         var_tstar =     ds.createVariable('tstar',      'f4');  var_tstar.units = "K"       # BOA LW BC
         var_toah =      ds.createVariable('toa_heating','f4');  var_toah.units = "W m-2"    # TOA SW BC
+        var_ps =        ds.createVariable('ps',         'f4');  var_ps.units = "Pa"
+        var_ptop =      ds.createVariable('ptop',       'f4');  var_ptop.units = "Pa" 
 
         #     Store data
         var_tstar.assignValue(self.ts)
         var_toah.assignValue(self.toa_heating)
-
+        var_ps.assignValue(self.ps)
+        var_ptop.assignValue(self.ptop)
 
         # ----------------------
         # Layer quantities  
@@ -330,9 +333,15 @@ class atmos:
         var_z =         ds.createVariable('z',       'f4', dimensions=('nlev_c'));           var_z.units = "m"
         var_zl =        ds.createVariable('zl',      'f4', dimensions=('nlev_l'));           var_zl.units = "m"
         var_grav =      ds.createVariable('gravity', 'f4', dimensions=('nlev_c'));           var_grav.units = "m s-2"
+        var_cp =        ds.createVariable('cp',      'f4', dimensions=('nlev_c'));           var_cp.units = "J/(kg K)"
+        var_xd =        ds.createVariable('xd',      'f4', dimensions=('nlev_c'));           var_xd.units = "none"
+        var_xv =        ds.createVariable('xv',      'f4', dimensions=('nlev_c'));           var_xv.units = "none"
+
         var_mmw =       ds.createVariable('mmw',     'f4', dimensions=('nlev_c'));           var_mmw.units = "kg mol-1"
         var_gases =     ds.createVariable('gases',   'S1', dimensions=('ngases', 'nchars'))  # Names of gases
         var_mr =        ds.createVariable('x_gas',   'f4', dimensions=('nlev_c', 'ngases'))  # Mixing ratios per level
+        var_cmr =       ds.createVariable('x_cond',  'f4', dimensions=('nlev_c', 'ngases'))  # Condensate mixing ratios per level
+        var_pvol =      ds.createVariable('p_vol',   'f4', dimensions=('nlev_c', 'ngases')); var_pvol.units = "Pa"  # Gas phase partial pressures
         var_fdl =       ds.createVariable('fl_D_LW', 'f4', dimensions=('nlev_l'));           var_fdl.units = "W m-2"
         var_ful =       ds.createVariable('fl_U_LW', 'f4', dimensions=('nlev_l'));           var_ful.units = "W m-2"
         var_fnl =       ds.createVariable('fl_N_LW', 'f4', dimensions=('nlev_l'));           var_fnl.units = "W m-2"
@@ -346,6 +355,10 @@ class atmos:
         var_sful =      ds.createVariable('Sfl_U_LW','f4', dimensions=('nbands', 'nlev_l')); var_sful.units = "W m-2 m-1"
         var_sfus =      ds.createVariable('Sfl_U_SW','f4', dimensions=('nbands', 'nlev_l')); var_sfus.units = "W m-2 m-1"
 
+        var_re =        ds.createVariable('re',      'f4', dimensions=('nlev_c'));           var_re.units = "m"
+        var_lwm =       ds.createVariable('lwm',     'f4', dimensions=('nlev_c'));           var_lwm.units = "kg kg-1"
+        var_clfr =      ds.createVariable('clfr',    'f4', dimensions=('nlev_c'));           var_clfr.units = "none"
+
         #     Store data
         var_p[:] =      self.p[:]
         var_pl[:] =     self.pl[:]
@@ -355,9 +368,14 @@ class atmos:
         var_zl[:]    =  self.zl[:]
         var_mmw[:]  =   self.mu[:]
         var_grav[:]  =  self.grav_z[:]
+        var_cp[:]  =  self.cp[:]
+        var_xd[:] = self.xd[:]
+        var_xv[:] = self.xv[:]
 
         var_gases[:] =  np.array([ [c for c in gas.ljust(nchars)[:nchars]] for gas in gas_list ] , dtype='S1')
         var_mr[:] =     np.array([ [ self.x_gas[gas][i] for i in range(nlev_c-1,-1,-1) ] for gas in gas_list  ]).T
+        var_cmr[:] =    np.array([ [ self.x_cond[gas][i] for i in range(nlev_c-1,-1,-1) ] for gas in gas_list  ]).T
+        var_pvol[:] =   np.array([ [ self.p_vol[gas][i] for i in range(nlev_c-1,-1,-1) ] for gas in gas_list  ]).T
 
         var_fdl[:] =    self.LW_flux_down[:]
         var_ful[:] =    self.LW_flux_up[:]
@@ -375,6 +393,10 @@ class atmos:
 
         var_sful[:,:] = self.LW_spectral_flux_up[:,:]
         var_sfus[:,:] = self.SW_spectral_flux_up[:,:]
+
+        var_re[:]   =   self.re[:]
+        var_lwm[:]  =   self.lwm[:]
+        var_clfr[:] =   self.clfr[:]
 
         # ----------------------
         # Close

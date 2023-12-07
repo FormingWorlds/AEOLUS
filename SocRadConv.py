@@ -106,7 +106,7 @@ if __name__ == "__main__":
     mix_coeff_surf  = 1e6 # mixing coefficient at the surface [s]
 
     # Cloud radiation
-    do_cloud = True
+    do_cloud = False
     # Options activated by do_cloud
     re   = 1.0e-5 # Effective radius of the droplets [m] (drizzle forms above 20 microns)
     lwm  = 0.8    # Liquid water mass fraction [kg/kg] - how much liquid vs. gas is there upon cloud formation? 0 : saturated water vapor does not turn liquid ; 1 : the entire mass of the cell contributes to the cloud
