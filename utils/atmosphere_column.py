@@ -208,6 +208,7 @@ class atmos:
             self.cloud_scheme 			= 2	# -C 2 = ip_cloud_mix_max : maximum/random overlap in a mixed column 
             self.cloud_representation   = 1 # -K 1 = ip_cloud_homogen : ice and water mixed homogeneously 
             self.droplet_type           = 5 # -d 5 
+            self.solver                 = 16 # -v 16 = i_solver : solver used for the two-stream calculations, chosen from those defined in solver_pcf.f90.
             # The below three variables should be zero until a cloud scheme forms clouds
             self.re                     = np.zeros(self.nlev_save) # Effective radius of the droplets [m]
             self.lwm                    = np.zeros(self.nlev_save) # Liquid water mass fraction [kg/kg]
@@ -220,6 +221,7 @@ class atmos:
             self.cloud_scheme 			= 5 # -C 5 = ip_cloud_off : clear sky. Other flags will be ignored. In principle we shouldn't need to define the variables below in this case.
             self.cloud_representation   = 1 
             self.droplet_type           = 5  
+            self.solver                 = 13
             self.re                     = np.zeros(self.nlev_save)
             self.lwm                    = np.zeros(self.nlev_save)
             self.clfr                   = np.zeros(self.nlev_save) 
