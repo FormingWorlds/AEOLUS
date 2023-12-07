@@ -57,6 +57,4 @@ def simple_cloud(atm):
                 atm.lwm[i]  = 0.0
                 atm.clfr[i] = 0.0
 
-    print("atm.lwm = ", atm.lwm)
-
     return atm
