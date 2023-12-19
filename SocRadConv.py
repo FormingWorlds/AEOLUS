@@ -46,7 +46,7 @@ if __name__ == "__main__":
     pl_mass       = 5.972e24            # kg, planet mass
 
     # Boundary conditions for pressure & temperature
-    T_surf        = 300.0                # K
+    T_surf        = 305.0                # K
     P_top         = 0.1                  # Pa
 
     # Define volatiles by mole fractions
