@@ -46,7 +46,7 @@ if __name__ == "__main__":
     pl_mass       = 5.972e24            # kg, planet mass
 
     # Boundary conditions for pressure & temperature
-    T_surf        = 2000.8                # K
+    T_surf        = 300.0                # K
     P_top         = 0.1                  # Pa
 
     # Define volatiles by mole fractions
@@ -82,7 +82,7 @@ if __name__ == "__main__":
     stellar_heating = True
 
     # Rayleigh scattering on/off
-    rscatter = False
+    rscatter = True
 
     # Compute contribution function
     calc_cf = False
@@ -106,11 +106,11 @@ if __name__ == "__main__":
     mix_coeff_surf  = 1e6 # mixing coefficient at the surface [s]
 
     # Cloud radiation
-    do_cloud = False
+    do_cloud = True
     # Options activated by do_cloud
     re   = 1.0e-5 # Effective radius of the droplets [m] (drizzle forms above 20 microns)
     lwm  = 0.8    # Liquid water mass fraction [kg/kg] - how much liquid vs. gas is there upon cloud formation? 0 : saturated water vapor does not turn liquid ; 1 : the entire mass of the cell contributes to the cloud
-    clfr = 1.0    # Water cloud fraction - how much of the current cell turns into cloud? 0 : clear sky cell ; 1 : the cloud takes over the entire area of the cell (just leave at 1 for 1D runs)
+    clfr = 0.999999    # Water cloud fraction - how much of the current cell turns into cloud? 0 : clear sky cell ; 1 : the cloud takes over the entire area of the cell (just leave at 1 for 1D runs)
 
     # Instellation scaling | 1.0 == no scaling
     Sfrac = 1.0

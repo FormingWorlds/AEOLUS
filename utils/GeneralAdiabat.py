@@ -748,17 +748,23 @@ def general_adiabat( atm ):
         nlev_save = atm.nlev_save
         skin_d = atm.skin_d
         skin_k = atm.skin_k
+        effective_radius = atm.effective_radius
+        liquid_water_fraction = atm.liquid_water_fraction
+        cloud_fraction = atm.cloud_fraction
 
         for vol in atm.vol_list.keys():
             atm.vol_list[vol] = new_p_vol[vol] / new_psurf
 
-        atm = atmos(Tsurf, new_psurf, atm.ptop, atm.planet_radius, atm.planet_mass, vol_mixing=atm.vol_list, trppT=atm.trppT, minT=minT, req_levels=nlev_save)
+        atm = atmos(Tsurf, new_psurf, atm.ptop, atm.planet_radius, atm.planet_mass, effective_radius, liquid_water_fraction, cloud_fraction, vol_mixing=atm.vol_list, trppT=atm.trppT, minT=minT, req_levels=nlev_save)
         
         atm.alpha_cloud = alpha
         atm.toa_heating = toa_heating
         atm.tmp_magma = tmp_magma
         atm.skin_d = skin_d
         atm.skin_k = skin_k
+        atm.effective_radius = effective_radius
+        atm.liquid_water_fraction = liquid_water_fraction
+        atm.cloud_fraction = cloud_fraction
         
     for vol in atm.vol_list.keys():
         if atm.vol_list[vol] * atm.ps == p_sat(vol,atm.ts,water_lookup=atm.water_lookup):
