@@ -120,7 +120,8 @@ def radCompSoc(atm, dirs, recalc, calc_cf=False, rscatter=False,
     if check_cfg(fthis): nctools.ncout2d(   fthis, 0, 0, float(atm.zenith_angle), 'szen', longname="Solar zenith angle", units='Degrees')
     
     fthis = basename+'.stoa'
-    if check_cfg(fthis): nctools.ncout2d(   fthis, 0, 0, atm.toa_heating, 'stoa', longname="Solar Irradiance at TOA", units='WM-2')
+    toah = atm.toa_heating * (1.0 - atm.albedo_pl) * atm.inst_sf
+    if check_cfg(fthis): nctools.ncout2d(   fthis, 0, 0, toah, 'stoa', longname="Solar Irradiance at TOA", units='WM-2')
 
     # T, P + volatiles
     fthis = basename+'.t'

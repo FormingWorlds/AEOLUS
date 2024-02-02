@@ -15,6 +15,7 @@ radiation_code.lock
 *.png
 Tprofile.pdf
 .DS_Store
+.vscode
 __pycache__/
 rad_trans/socrates_code/*
 !rad_trans/socrates_code/.gitkeep

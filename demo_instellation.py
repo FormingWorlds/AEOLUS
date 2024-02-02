@@ -43,10 +43,11 @@ def run_once(sep, dirs, T_magma, P_surf, skin_d):
     trppD = False   # Calculate dynamically?
 
     A_B = 0.175  # bond albedo
+    inst_sf = 3.0/8.0
     
     ##### Function calls
 
-    inst, toa_heating = InterpolateStellarLuminosity(star_mass, time, sep, A_B, 3.0/8.0)
+    toa_heating = InterpolateStellarLuminosity(star_mass, time, sep)
 
     zenith_angle = 48.19 # cronin+14 (also for scaling by a factor of 3/8 ^^)
 
@@ -59,6 +60,7 @@ def run_once(sep, dirs, T_magma, P_surf, skin_d):
     # Create atmosphere object
     atm = atmos(T_magma,  P_surf * 1e5, P_top, pl_radius, pl_mass, vol_mixing=vol_mixing, trppT=T_trpp)
     atm.albedo_pl = A_B
+    atm.inst_sf = inst_sf
     atm.zenith_angle = zenith_angle
     atm.toa_heating = toa_heating
     atmos.skin_d = skin_d

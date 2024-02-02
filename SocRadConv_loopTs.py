@@ -45,13 +45,13 @@ if __name__ == "__main__":
 
     # Planet 
     time = { "planet": 0., "star": 4e+9 } # yr,
-    star_mass     = 1.0 #0.1*1.0                 # M_sun, mass of star
-    mean_distance = 1.0 #0.0252*1.0              # au, orbital distance
-    pl_radius     = 6.371e6 #1.1*6.371e6             # m, planet radius
-    pl_mass       = 5.972e24 #1.05*5.972e24           # kg, planet mass
+    star_mass     = 0.1*1.0                 # M_sun, mass of star
+    mean_distance = 0.0252*1.0              # au, orbital distance
+    pl_radius     = 1.1*6.371e6             # m, planet radius
+    pl_mass       = 1.05*5.972e24           # kg, planet mass
 
     # Boundary conditions for pressure & temperature
-    T_surf        = 500.0                # K
+    T_surf        = 650.0                # K
     P_top         = 1.0                  # Pa
 
     # Stellar heating on/off
@@ -144,8 +144,8 @@ if __name__ == "__main__":
         if stellar_heating == False: 
             atm.toa_heating = 0.
         else:
-            _, atm.toa_heating = InterpolateStellarLuminosity(star_mass, time, mean_distance, atm.albedo_pl, Sfrac)
-            print("TOA heating:", round(atm.toa_heating), "W/m^2")
+            atm.toa_heating = InterpolateStellarLuminosity(star_mass, time, mean_distance)
+            print("Instellation:", round(atm.toa_heating), "W/m^2")
 
         # Move/prepare spectral file
         print("Inserting stellar spectrum")

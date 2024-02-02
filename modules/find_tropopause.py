@@ -97,13 +97,23 @@ def find_tropopause(atm_moist, dynamic: bool, verbose=True):
         if verbose:
             print("TROPOPAUSE SET BY CONTANT VALUE OF", atm_moist.trppT, "K")
 
-        if np.amin(atm_moist.tmpl) > atm_moist.trppT:
-            trpp_idx = (np.abs(atm_moist.tmpl - atm_moist.trppT)).argmin()
-            atm_moist.trppidx   = trpp_idx                  # index
-            atm_moist.trppP     = atm_moist.pl[trpp_idx]    # pressure 
+        # Tropopause is triggered
+        if np.any(atm_moist.tmpl <= atm_moist.trppT) or np.any(atm_moist.tmp <= atm_moist.trppT):
+            # Loop from bottom upwards to find first level where temperature drops below required value
+            for i in range(len(atm_moist.tmpl)-1,-1,-1):
+                if atm_moist.tmpl[i] < atm_moist.trppT:
+                    # Found tropopause, so break loop and set result
+                    atm_moist.trppidx = i
+                    atm_moist.trppP   = atm_moist.pl[i] 
+                    break
 
+            # Make-safe the edge case where trppT > T_surf
+            atm_moist.trppidx = int(min(atm_moist.trppidx, len(atm_moist.tmpl)-1))
+            atm_moist.trppidx = int(min(atm_moist.trppidx, len(atm_moist.tmp)-1))
+            atm_moist.trppP   = atm_moist.pl[atm_moist.trppidx] 
+
+        # Tropopause isn't triggered
         else:
-            # tropopause isn't triggered
             atm_moist.trppidx   = -1
             atm_moist.trppP     = 1.0e-10
 

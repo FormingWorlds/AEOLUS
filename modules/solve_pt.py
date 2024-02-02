@@ -136,6 +136,7 @@ def MCPA_CL(dirs, atm_inp, trppD:bool, rscatter:bool, atm_bc:int=0, T_surf_guess
     alpha =         atm_inp.alpha_cloud
     toa_heating =   atm_inp.toa_heating
     minT =          atm_inp.minT
+    inst_sf =       atm_inp.inst_sf
     maxT =          atm_inp.maxT
     nlev_save =     atm_inp.nlev_save
     vol_list =      atm_inp.vol_list
@@ -156,6 +157,7 @@ def MCPA_CL(dirs, atm_inp, trppD:bool, rscatter:bool, atm_bc:int=0, T_surf_guess
     def ini_atm(Ts):
         _a = atmos(Ts, psurf, ptop, pl_r, pl_m , vol_mixing=vol_list, trppT=trppT, minT=minT, maxT=maxT, req_levels=nlev_save)
         _a.toa_heating = toa_heating
+        _a.inst_sf = inst_sf
         _a.alpha_cloud = alpha
         _a.skin_k = skin_k
         _a.skin_d = skin_d 

@@ -18,7 +18,7 @@ def set_stratosphere(atm):
     trpp_tmp = atm.trppT
 
     if trpp_idx < 0:
-        return
+        return atm
 
     # Standard nodes
     for prs_idx, prs in enumerate(atm.p):

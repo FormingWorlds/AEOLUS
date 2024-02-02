@@ -112,11 +112,12 @@ class atmos:
 
         self.dt 			= 0.5 							# days
 
-        self.toa_heating    = 0. 							# W/m^2
+        self.toa_heating    = 0. 							# Instellation at planet's orbital separation, W/m^2
         self.star_lum       = 0.0							# L_sun
 
+        self.inst_sf        = 3.0/8.0                       # Scale factor applied to instellation (see Cronin+14 for definitions)
         self.albedo_s   	= 0.0 							# surface albedo
-        self.albedo_pl   	= 0.175 						# Bond albedo (scattering)
+        self.albedo_pl   	= 0.175 						# Bond albedo (scattering) applied to self.toa_heating in socrates.py
         self.zenith_angle  	= 54.74							# solar zenith angle, Hamano+15 (arccos(1/sqrt(3) = 54.74), Wordsworth+10: 48.19 (arccos(2/3)), see Cronin+14 for definitions
 
         self.planet_mass    = pl_mass

@@ -21,6 +21,7 @@ import numpy as np
 
 from modules.stellar_luminosity import InterpolateStellarLuminosity
 from modules.solve_pt import RadConvEqm
+from modules.solve_pt import *
 from modules.plot_flux_balance import plot_fluxes
 from utils.socrates import CleanOutputDir
 
@@ -46,7 +47,7 @@ if __name__ == "__main__":
     pl_mass       = 1.05*5.972e24            # kg, planet mass
 
     # Boundary conditions for pressure & temperature
-    T_surf        = 650.0                # K
+    T_surf        = 300.0                # K
     P_top         = 1.0                  # Pa
 
     # Define volatiles by mole fractions
@@ -68,11 +69,11 @@ if __name__ == "__main__":
     P_surf = 0.0
     vol_mixing = {}
     vol_partial = {
-        "H2O" : ga.p_sat('H2O',T_surf), #1e3,
+        "H2O" : 0.0354 * 1.0e5, #ga.p_sat('H2O',T_surf), #1e3,
         "NH3" : 0.,
-        "CO2" : 4.0e2,
+        "CO2" : 0.,
         "CH4" : 0.0,
-        "CO" : 3.0e2,
+        "CO" : 0.,
         "O2" : 0.0e4,
         "N2" : 1.0e5,
         "H2" : 0.0e3
@@ -136,8 +137,8 @@ if __name__ == "__main__":
     if stellar_heating == False: 
         atm.toa_heating = 0.
     else:
-        _, atm.toa_heating = InterpolateStellarLuminosity(star_mass, time, mean_distance, atm.albedo_pl, Sfrac)
-        print("TOA heating:", round(atm.toa_heating), "W/m^2")
+        atm.toa_heating = InterpolateStellarLuminosity(star_mass, time, mean_distance)
+        print("Instellation:", round(atm.toa_heating), "W/m^2")
 
     # Move/prepare spectral file
     print("Inserting stellar spectrum")
