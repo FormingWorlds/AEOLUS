@@ -46,7 +46,7 @@ def moist_adj(atm, conv_timescale, nb_convsteps = 10):
         #------------------- L = cst -------------------
         for i in range(nlev-1): #Downward pass
             pp_h2o = atm.p_vol["H2O"][i]
-            if (pp_h2o < 1e-10):
+            if (pp_h2o > 1e-10):
                 continue
             if (Tmid_cc[i] < ga.Tdew('H2O',pp_h2o)):
                 Tmid_cc[i]=ga.Tdew('H2O',pp_h2o)
@@ -54,7 +54,7 @@ def moist_adj(atm, conv_timescale, nb_convsteps = 10):
 
         for i in range(-2,1,-1): #Upward pass
             pp_h2o = atm.p_vol["H2O"][i]
-            if (pp_h2o < 1e-10):
+            if (pp_h2o > 1e-10):
                 continue
             if (Tmid_cc[i] < ga.Tdew('H2O',pp_h2o)):
                 Tmid_cc[i]=ga.Tdew('H2O',pp_h2o)

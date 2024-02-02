@@ -40,14 +40,14 @@ if __name__ == "__main__":
 
     # Planet 
     time = { "planet": 0., "star": 4e+9 } # yr,
-    star_mass     = 1.0                 # M_sun, mass of star
-    mean_distance = 1.0                 # au, orbital distance
-    pl_radius     = 6.371e6             # m, planet radius
-    pl_mass       = 5.972e24            # kg, planet mass
+    star_mass     = 0.1*1.0                 # M_sun, mass of star
+    mean_distance = 0.0252*1.0                 # au, orbital distance
+    pl_radius     = 1.1*6.371e6             # m, planet radius
+    pl_mass       = 1.05*5.972e24            # kg, planet mass
 
     # Boundary conditions for pressure & temperature
-    T_surf        = 305.0                # K
-    P_top         = 0.1                  # Pa
+    T_surf        = 650.0                # K
+    P_top         = 1.0                  # Pa
 
     # Define volatiles by mole fractions
     # P_surf       = 100 * 1e5
@@ -68,14 +68,14 @@ if __name__ == "__main__":
     P_surf = 0.0
     vol_mixing = {}
     vol_partial = {
-        "H2O" : 1.54642e5,
+        "H2O" : ga.p_sat('H2O',T_surf), #1e3,
         "NH3" : 0.,
-        "CO2" : 6.70820e5,
-        "CH4" : 0.,
-        "CO" : 129.85989e5,
-        "O2" : 0.20e5,
-        "N2" : 1.53779e5,
-        "H2" : 13.01485e5
+        "CO2" : 4.0e2,
+        "CH4" : 0.0,
+        "CO" : 3.0e2,
+        "O2" : 0.0e4,
+        "N2" : 1.0e5,
+        "H2" : 0.0e3
         }
 
     # Stellar heating on/off
@@ -91,7 +91,7 @@ if __name__ == "__main__":
     pure_steam_adj = False
 
     # Tropopause calculation
-    trppD = False   # Calculate dynamically?
+    trppD = True   # Calculate dynamically?
     trppT = 30.0     # Fixed tropopause value if not calculated dynamically
 
     # Water lookup tables enabled (e.g. for L vs T dependence)
@@ -106,11 +106,11 @@ if __name__ == "__main__":
     mix_coeff_surf  = 1e6 # mixing coefficient at the surface [s]
 
     # Cloud radiation
-    do_cloud = True
+    do_cloud = False
     # Options activated by do_cloud
     re   = 1.0e-5 # Effective radius of the droplets [m] (drizzle forms above 20 microns)
     lwm  = 0.8    # Liquid water mass fraction [kg/kg] - how much liquid vs. gas is there upon cloud formation? 0 : saturated water vapor does not turn liquid ; 1 : the entire mass of the cell contributes to the cloud
-    clfr = 0.999999    # Water cloud fraction - how much of the current cell turns into cloud? 0 : clear sky cell ; 1 : the cloud takes over the entire area of the cell (just leave at 1 for 1D runs)
+    clfr = 0.8    # Water cloud fraction - how much of the current cell turns into cloud? 0 : clear sky cell ; 1 : the cloud takes over the entire area of the cell (just leave at 1 for 1D runs)
 
     # Instellation scaling | 1.0 == no scaling
     Sfrac = 1.0
@@ -143,7 +143,7 @@ if __name__ == "__main__":
     print("Inserting stellar spectrum")
 
     StellarSpectrum.InsertStellarSpectrum(
-        dirs["aeolus"]+"/spectral_files/Reach/Reach_cloud/Reach",
+        dirs["aeolus"]+"/spectral_files/Reach/Reach",
         dirs["aeolus"]+"/spectral_files/stellar_spectra/Sun_t4_4Ga_claire_12.txt",
         dirs["output"]+"runtime_spectral_file"
     )
@@ -151,6 +151,12 @@ if __name__ == "__main__":
     # Set up atmosphere with general adiabat
     atm_dry, atm = RadConvEqm(dirs, time, atm, standalone=True, cp_dry=cp_dry, trppD=trppD, calc_cf=calc_cf, rscatter=rscatter, do_cloud=do_cloud, pure_steam_adj=pure_steam_adj, surf_dt=surf_dt, cp_surf=cp_surf, mix_coeff_atmos=mix_coeff_atmos, mix_coeff_surf=mix_coeff_surf) 
 
+    OPR = atm.flux_up_total[0]
+    ASR = atm.flux_down_total[0]
+    imbalance = ASR - OPR
+
+    print("T_surf, OLR, ASR, imbalance = ", T_surf, OPR, ASR, imbalance)
+    
     # Plot abundances w/ TP structure
     if (cp_dry):
         ga.plot_adiabats(atm_dry,filename="output/dry_ga.pdf")
@@ -161,6 +167,9 @@ if __name__ == "__main__":
     atm.write_PT(filename="output/moist_pt.tsv")
     atm.write_ncdf("output/moist_atm.nc")
     plot_fluxes(atm,filename="output/moist_fluxes.pdf")
+
+    # Copy this file to the output folder
+    shutil.copy(__file__, os.path.join("output", os.path.basename(__file__)))
 
     # Tidy
     CleanOutputDir(os.getcwd())

@@ -174,11 +174,13 @@ def atm_z(atm, idx):
     #     cell edges 
     dp = atm.pl[idx+1]-atm.pl[idx]
     dz =  -dp / atm.rho[idx]
+    #print("dp = ", dp)
+    #print("dz = ", dz)
     atm.zl[idx+1] = atm.zl[idx] + dz
-    if dz<0:
-        print("WARNING: dz  = %g < 0 " % dz)
-        print("         (dp  = %g)" % dp)
-        print("         (rho = %g)" % atm.rho[idx])
+    #if dz<0:
+    #    print("WARNING: dz  = %g < 0 " % dz)
+    #    print("         (dp  = %g)" % dp)
+    #    print("         (rho = %g)" % atm.rho[idx])
     
     # Next gravity
     atm.grav_z[idx+1] = atm.grav_s * ((atm.planet_radius)**2) / ((atm.planet_radius+atm.z[idx+1])**2)
@@ -499,6 +501,8 @@ def dlnT_dlnP_d(lnP, lnT, atm):
     for vol in atm.vol_list.keys(): 
         # Coefficients
         eta_vol     = atm.x_gas[vol][idx] / atm.xd[idx]
+        #print("atm.x_gas['H2O'][idx] = ", atm.x_gas['H2O'][idx])
+        #print("atm.xd[idx] = ", atm.xd[idx])
         eta_cond    = atm.x_cond[vol][idx] / atm.xd[idx]
         #print(eta_vol)
         # sums for saturated comps
@@ -590,7 +594,6 @@ def condensation( atm, idx, wet_list, dry_list, prs_reset):
     # Temperature floor
     tmp = np.amax([atm.tmp[idx], atm.minT])
     
-    
     if idx==0:
         
         # Renormalize mixing ratios to ensure sum == 1
@@ -606,7 +609,6 @@ def condensation( atm, idx, wet_list, dry_list, prs_reset):
             #atm.p_vol[vol][idx] = atm.vol_list[vol] * p_tot_pre_condensation
             # Mean gas phase molar mass
             atm.mu[idx]       += atm.vol_list[vol] * phys.molar_mass[vol]
-    
     else:  
         
         # Total pressure & partial pressures of condensing phases
@@ -615,7 +617,7 @@ def condensation( atm, idx, wet_list, dry_list, prs_reset):
             if vol in wet_list:
                 atm.p_vol[vol][idx] = p_sat(vol, atm.tmp[idx],water_lookup=atm.water_lookup)
                 p_cond_sum += atm.p_vol[vol][idx]
-                
+        
         # Calculate the total partial pressure of dry species
         p_dry_tot = atm.p[idx] - p_cond_sum
         dry_frac_sum = 0
@@ -654,7 +656,7 @@ def condensation( atm, idx, wet_list, dry_list, prs_reset):
             else:
                 #mu_old = atm.mu[idx-1]
                 atm.x_cond[vol][idx] = atm.x_cond[vol][idx-1] + atm.x_gas[vol][idx-1] - (1-atm.xc[idx-1])*(atm.p_vol[vol][idx]/atm.p[idx])
-
+                atm.x_cond[vol][idx] = max(1e-10, min(1-1e-10, atm.x_cond[vol][idx])) # Force it to remain between 0 and 1
         #atm.x_cond[vol][idx] *= atm.alpha_cloud
 
         # Add to molar concentration of total condensed phase
@@ -664,16 +666,22 @@ def condensation( atm, idx, wet_list, dry_list, prs_reset):
         #atm.x_gas[vol][idx] = atm.p_vol[vol][idx] / atm.p[idx]
         if idx == 0:
             #atm.x_gas[vol][idx] =  mu_old / atm.mu[idx] * atm.p_vol[vol][idx] /  p_tot_pre_condensation
+            #print("BADGER 1: atm.vol_list[vol] = ", atm.vol_list[vol])
             atm.x_gas[vol][idx] = atm.vol_list[vol]
+            atm.x_gas[vol][idx] = max(1e-10, min(1-1e-10, atm.x_gas[vol][idx])) # Force it to remain between 0 and 1
             
         else:
+            #print("BADGER 2: atm.p_vol[vol][idx] = ", atm.p_vol[vol][idx])
+            #print("BADGER 2: atm.xc[idx] = ", atm.xc[idx])
             atm.x_gas[vol][idx] =  ( 1-atm.xc[idx] ) * atm.p_vol[vol][idx] /  atm.p[idx]
+            atm.x_gas[vol][idx] = max(1e-10, min(1-1e-10, atm.x_gas[vol][idx])) # Force it to remain between 0 and 1
             #atm.x_gas[vol][idx] =  mu_old / atm.mu[idx] * atm.p_vol[vol][idx] /  p_tot_pre_condensation
         
         # Add to molar concentration of total gas (dry or moist) phase
         # ! REVISIT ! keeping xd == 0 leads to a bug, why?
         if vol in dry_list:
             atm.xd[idx]          += atm.x_gas[vol][idx]
+            atm.xd[idx] = max(1e-10, min(1-1e-10, atm.xd[idx])) # Force it to be between 0 and 1
         if vol in wet_list:
             atm.xv[idx]          += atm.x_gas[vol][idx]
         
@@ -855,6 +863,7 @@ def interpolate_atm(atm):
     atm.xc      = np.flip(np.split(atm.xc, [atm_len, rest_len])[0], axis=0)
     atm.cp      = np.flip(np.split(atm.cp, [atm_len, rest_len])[0], axis=0)
     atm.rho     = np.flip(np.split(atm.rho, [atm_len, rest_len])[0], axis=0)
+    atm.rh      = np.flip(np.split(atm.rh, [atm_len, rest_len])[0], axis=0)
     # Interpolate level-dependent quantities
     atm.grav_z  = np.interp(prs_itp, atm.p, atm.grav_z)
     atm.z       = np.interp(prs_itp, atm.p, atm.z)
@@ -864,6 +873,7 @@ def interpolate_atm(atm):
     atm.xc      = np.interp(prs_itp, atm.p, atm.xc)
     atm.cp      = np.interp(prs_itp, atm.p, atm.cp)
     atm.rho     = np.interp(prs_itp, atm.p, atm.rho)
+    atm.rh      = np.interp(prs_itp, atm.p, atm.rh)
     # Trim & interpolate species-dependent quantities
     for vol in atm.vol_list.keys():
         
@@ -989,11 +999,11 @@ def plot_adiabats(atm,filename='output/general_adiabat.pdf'):
 if __name__ == "__main__":
 
     # Surface temperature & partial pressures
-    T_surf                  = 400                           # K
+    T_surf                  = 700.0                         # K
     pH2O                    = p_sat('H2O',T_surf)           # Pa
     pCO2                    = 0.                            # Pa
     pH2                     = 0.                            # Pa
-    pN2                     = 3e+5                          # Pa
+    pN2                     = 1e+5                          # Pa
     pCH4                    = 0.                            # Pa
     pO2                     = 0.                            # Pa
     pHe                     = 0.                            # Pa
@@ -1007,6 +1017,10 @@ if __name__ == "__main__":
     pl_mass       = 5.972e24            # kg, planet mass
     P_top         = 1.0                 # Pa
     
+    re   = 1.0e-5 # Effective radius of the droplets [m] (drizzle forms above 20 microns)
+    lwm  = 0.8    # Liquid water mass fraction [kg/kg] - how much liquid vs. gas is there upon cloud formation? 0 : saturated water vapor does not turn liquid ; 1 : the entire mass of the cell contributes to the cloud
+    clfr = 0.0    # Water cloud fraction - how much of the current cell turns into cloud? 0 : clear sky cell ; 1 : the cloud takes over the entire area of the cell (just leave at 1 for 1D runs)
+
     # Volatile molar concentrations in the dictionary below are defined as fractions that must sum to one
     # The vanilla setting defines a water-saturated atmosphere with a 3 bar N2 background
     vol_list = { 
@@ -1021,7 +1035,7 @@ if __name__ == "__main__":
                   "NH3" : pNH3 / P_surf,
                 }
     # Create atmosphere object
-    atm                     = atmos(T_surf, P_surf, P_top, pl_radius, pl_mass, vol_mixing=vol_list)
+    atm                     = atmos(T_surf, P_surf, P_top, pl_radius, pl_mass, re, lwm, clfr, vol_mixing=vol_list)
 
     # Set fraction of condensate retained in column (0 = full rainout)
     atm.alpha_cloud         = alpha_cloud
@@ -1030,5 +1044,5 @@ if __name__ == "__main__":
     atm                     = general_adiabat(atm)
 
     # Plot adiabat
-    plot_adiabats(atm, filename="../output/general_adiabat.pdf")
+    plot_adiabats(atm, filename="/home/rybo8194/PROTEUS/AEOLUS/output/general_adiabat.pdf")
     

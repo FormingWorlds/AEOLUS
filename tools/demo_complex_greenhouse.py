@@ -56,16 +56,21 @@ def run_once(T_surf, dirs):
     # Instellation scaling | 1.0 == no scaling
     Sfrac = 1.0
 
+    do_cloud = False
+    re   = 1.0e-5 # Effective radius of the droplets [m] (drizzle forms above 20 microns)
+    lwm  = 0.8    # Liquid water mass fraction [kg/kg] - how much liquid vs. gas is there upon cloud formation? 0 : saturated water vapor does not turn liquid ; 1 : the entire mass of the cell contributes to the cloud
+    clfr = 0.0 
+
     ##### Function calls
 
     # Create atmosphere object
-    atm            = atmos(T_surf, P_surf, P_top, pl_radius, pl_mass, vol_mixing=vol_mixing, trppT=trppT)
+    atm            = atmos(T_surf, P_surf, P_top, pl_radius, pl_mass, re, lwm, clfr, vol_mixing=vol_mixing, trppT=trppT, do_cloud=do_cloud)
 
     # Compute stellar heating
     _, atm.toa_heating = InterpolateStellarLuminosity(star_mass, time, mean_distance, atm.albedo_pl, Sfrac)
 
     # Do rad trans
-    _, atm_moist = RadConvEqm(dirs, time, atm, standalone=True, cp_dry=False, trppD=trppD, calc_cf=calc_cf, rscatter=rscatter) 
+    _, atm_moist = RadConvEqm(dirs, time, atm, standalone=True, cp_dry=False, trppD=trppD, calc_cf=calc_cf, rscatter=rscatter, do_cloud=do_cloud) 
 
     return [T_surf, atm_moist.net_flux[0], atm_moist.net_flux[-1]]
 

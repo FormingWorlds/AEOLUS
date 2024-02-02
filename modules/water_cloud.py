@@ -13,7 +13,9 @@ import utils.GeneralAdiabat as ga # Moist adiabat with multiple condensibles
 def simple_cloud(atm):
     """Simple water cloud routine.
 
-    Define the three SOCRATES cloud input arrays with user-defined values where cloud condensation occurs. These values could be made to vary with height. 
+    Define the three SOCRATES cloud input arrays with user-defined values where cloud condensation occurs. These values can vary with height. 
+    If the general adiabat is used, the liquid water mass mixing ratio is provided by x_cond.
+    The cloud top is defined by the troposphere.
 
     Parameters
     ----------
@@ -29,10 +31,8 @@ def simple_cloud(atm):
 
         for i in range(nlev-1): 
             pp_h2o = atm.p_vol["H2O"][i]
-            if (pp_h2o < 1e-10):
-                continue
-            
-            if (Tmid[i] <= ga.Tdew('H2O',pp_h2o)):
+
+            if (Tmid[i] <= ga.Tdew('H2O',pp_h2o) and atm.p[i] > atm.trppP):
                 atm.re[i]   = atm.effective_radius
                 atm.lwm[i]  = atm.liquid_water_fraction
                 atm.clfr[i] = atm.cloud_fraction
@@ -45,10 +45,8 @@ def simple_cloud(atm):
             
         for i in range(nlev-1): 
             pp_h2o = atm.p_vol["H2O"][i]
-            if (pp_h2o < 1e-10):
-                continue
 
-            if (atm.x_cond['H2O'][i] > 0.0):
+            if (atm.x_cond['H2O'][i] > 0.0 and atm.p[i] > atm.trppP):
                 atm.re[i]   = atm.effective_radius
                 atm.lwm[i]  = atm.x_cond['H2O'][i]
                 atm.clfr[i] = atm.cloud_fraction
@@ -56,5 +54,5 @@ def simple_cloud(atm):
                 atm.re[i]   = 0.0
                 atm.lwm[i]  = 0.0
                 atm.clfr[i] = 0.0
-
+            
     return atm
