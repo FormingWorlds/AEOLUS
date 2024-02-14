@@ -82,7 +82,7 @@ if __name__ == "__main__":
     mix_coeff_surf  = 1e6 # mixing coefficient at the surface [s]
 
     # Cloud radiation
-    do_cloud = False
+    do_cloud = True
     # Options activated by do_cloud
     re   = 1.0e-5 # Effective radius of the droplets [m] (drizzle forms above 20 microns)
     lwm  = 0.8    # Liquid water mass fraction [kg/kg] - how much liquid vs. gas is there upon cloud formation? 0 : saturated water vapor does not turn liquid ; 1 : the entire mass of the cell contributes to the cloud
@@ -95,7 +95,7 @@ if __name__ == "__main__":
 
     def calculate_imbalance(index, T_surf):
     
-        pH2O                    = 0.0354 * 1.0e5 #min(260e5,ga.p_sat('H2O',T_surf))       # Pa
+        pH2O                    = min(260e5,ga.p_sat('H2O',T_surf))       # Pa
         pCO2                    = 0.                            # Pa
         pH2                     = 0.                            # Pa
         pN2                     = 1e+5                          # Pa
@@ -151,7 +151,7 @@ if __name__ == "__main__":
         print("Inserting stellar spectrum")
 
         StellarSpectrum.InsertStellarSpectrum(
-            dirs["aeolus"]+"/spectral_files/Reach/Reach",
+            dirs["aeolus"]+"/spectral_files/Reach/Reach_cloud/Reach",
             dirs["aeolus"]+"/spectral_files/stellar_spectra/Sun_t4_4Ga_claire_12.txt",
             dirs["output"]+"runtime_spectral_file"
         )
@@ -187,7 +187,7 @@ if __name__ == "__main__":
             print(f"Minimized imbalance achieved! T_surf: {result}, Imbalance: {calculate_imbalance(result)}")
 
 
-    loop = False
+    loop = True
     if loop == False:
 
         # ------------------- Day side -------------------
@@ -207,7 +207,7 @@ if __name__ == "__main__":
         lwm  = 0.8   
         clfr = 0.0  
 
-        Ts_day = 300.0 #ga.Tdew('H2O',sum(vol_partial.values()))
+        Ts_day = 2700.0 #ga.Tdew('H2O',sum(vol_partial.values()))
         stellar_heating = True
         atm = calculate_imbalance(0, Ts_day)
         print("Ts_day = ", Ts_day)
@@ -215,10 +215,12 @@ if __name__ == "__main__":
         OSR_day = atm.SW_flux_up[0]
         OPR_day = atm.flux_up_total[0]
         NET_day = atm.net_flux[0]
+        ASR_day = atm.SW_flux_down[0] - atm.SW_flux_up[0]
         print("OLR_day = ", OLR_day)
         print("OSR_day = ", OSR_day)
         print("OPR_day = ", OPR_day)
         print("NET_day = ", NET_day)
+        print("ASR_day = ", ASR_day)
         ISR = atm.SW_flux_down[0]
         print("ISR = ", ISR)
 
@@ -252,17 +254,19 @@ if __name__ == "__main__":
         OSR_night = atm.SW_flux_up[0]
         OPR_night = atm.flux_up_total[0]
         NET_night = atm.net_flux[0]
+        ASR_night = atm.SW_flux_down[0] - atm.SW_flux_up[0]
         print("OLR_night = ", OLR_night)
         print("OSR_night = ", OSR_night)
         print("OPR_night = ", OPR_night)
         print("NET_night = ", NET_night)
+        print("ASR_night = ", ASR_night)
 
         # ------------------- Albedo from balance -------------------
         # OPR_day + OPR_night - S(1-alpha_p) = 0 ; ASR = S(1-alpha_p). S = ISR.
-        ASR = OLR_day + OLR_night
-        print("ASR = ", ASR)
-        planetary_albedo = 1.0-(ASR/ISR)
-        print("planetary_albedo = ", planetary_albedo)
+        #ASR = OLR_day + OLR_night
+        #print("ASR = ", ASR)
+        #planetary_albedo = 1.0-(ASR/ISR)
+        #print("planetary_albedo = ", planetary_albedo)
 
     else:
         T_surf_array = np.arange(200.0, 3000.0+50.0, 50)
@@ -273,7 +277,7 @@ if __name__ == "__main__":
             # ------------------- Day side -------------------
             dirs = {
                     "aeolus": os.getenv('AEOLUS_DIR')+"/",
-                    "output": os.getenv('AEOLUS_DIR')+f"/200_to_3000_K_full_condensate_retention_clear_sky/output_day_{int(temperature)}K/"
+                    "output": os.getenv('AEOLUS_DIR')+f"/200_to_3000_K_full_condensate_retention_cloudy_99_9999/output_day_{int(temperature)}K/"
                     }
             
             # Tidy directory
@@ -284,7 +288,7 @@ if __name__ == "__main__":
             # Set up the dayside cloud
             re   = 1.0e-5 
             lwm  = 0.8   
-            clfr = 0.0  
+            clfr = 0.999999
 
             print("index, temperature = ", i, temperature)
             stellar_heating = True
@@ -303,7 +307,7 @@ if __name__ == "__main__":
             # ------------------- Night side -------------------
             dirs = {
             "aeolus": os.getenv('AEOLUS_DIR')+"/",
-            "output": os.getenv('AEOLUS_DIR')+f"/200_to_3000_K_full_condensate_retention_clear_sky/output_night_{int(temperature)}K/"
+            "output": os.getenv('AEOLUS_DIR')+f"/200_to_3000_K_full_condensate_retention_cloudy_99_9999/output_night_{int(temperature)}K/"
             }
             
             if os.path.exists(dirs["output"]):
@@ -324,15 +328,15 @@ if __name__ == "__main__":
             NET_night = atm.net_flux[0]
 
             # ------------------- Analysis -------------------
-            ASR = NET_day + NET_night
-            planetary_albedo = 1.0-(ASR/ISR)
+            #ASR = NET_day + NET_night
+            #planetary_albedo = 1.0-(ASR/ISR)
 
-            asr_albedo_file.append([temperature, ASR, planetary_albedo])
+            #asr_albedo_file.append([temperature, ASR, planetary_albedo])
 
-        filename = f"asr_albedo.txt"
-        with open(filename, "w") as file:
-            for temperature, ASR, planetary_albedo in asr_albedo_file:
-                file.write(f"{temperature}\t{ASR}\t{planetary_albedo}\n")
+        #filename = f"asr_albedo.txt"
+        #with open(filename, "w") as file:
+        #    for temperature, ASR, planetary_albedo in asr_albedo_file:
+        #        file.write(f"{temperature}\t{ASR}\t{planetary_albedo}\n")
 
     # Copy this file to the output folder
     shutil.copy(__file__, os.path.join(dirs["output"], os.path.basename(__file__)))

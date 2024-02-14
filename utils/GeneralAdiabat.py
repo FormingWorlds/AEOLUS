@@ -661,7 +661,6 @@ def condensation( atm, idx, wet_list, dry_list, prs_reset):
         if idx == 0:
             #atm.x_gas[vol][idx] =  mu_old / atm.mu[idx] * atm.p_vol[vol][idx] /  p_tot_pre_condensation
             atm.x_gas[vol][idx] = atm.vol_list[vol]
-            atm.x_gas[vol][idx] = max(1e-10, min(1-1e-10, atm.x_gas[vol][idx])) # Force it to remain between 0 and 1
             
         else:
             atm.x_gas[vol][idx] =  ( 1-atm.xc[idx] ) * atm.p_vol[vol][idx] /  atm.p[idx]

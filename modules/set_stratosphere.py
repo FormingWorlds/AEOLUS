@@ -9,6 +9,7 @@ Ryan Boukrouche (RB)
 """
 
 import numpy as np
+import utils.phys as phys
 import utils.GeneralAdiabat as ga # Moist adiabat with multiple condensibles
     
 def set_stratosphere(atm):
@@ -36,6 +37,7 @@ def set_stratosphere(atm):
     for idx in reversed(range(0, trpp_idx)):
     
         atm.cp[idx] = 0.
+        atm.mu[idx] = 0.
 
         # Volatile abundances
         for vol in atm.vol_list.keys():
@@ -69,5 +71,7 @@ def set_stratosphere(atm):
 
             # Renormalize cp w/ molar concentration
             atm.cp[idx]   += (atm.x_gas[vol][idx] + atm.x_cond[vol][idx]) * ga.cpv(vol, atm.tmp[idx]) / (atm.xd[idx] + atm.xv[idx] + atm.xc[idx]) # w/ cond
+            # Renormalise mu with updated x_gas values 
+            atm.mu[idx] += phys.molar_mass[vol] * atm.x_gas[vol][idx]
 
     return atm

@@ -93,7 +93,7 @@ class atmos:
         self.vol_list["H2O"] = np.max( [ self.vol_list["H2O"], 1e-30 ] )
 
         # Initialise other variables
-        self.alpha_cloud 	= 0.0 	    	# The fraction of condensate retained in the column; 1 -> Li et al 2018; 0 -> full rainout
+        self.alpha_cloud 	= 1.0 	    	# The fraction of condensate retained in the column; 1 -> Li et al 2018; 0 -> full rainout
         
         self.ts 			= T_surf		# Surface temperature, K
 

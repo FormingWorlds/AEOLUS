@@ -8,8 +8,8 @@ def find_intersection(curve1, curve2, tolerance=1e-1):
         first_intersection_index = intersection_indices[-1]
         first_intersection_value = curve1[first_intersection_index]
         
-        print("LCL index:", first_intersection_index)
-        print("LCL value:", first_intersection_value)
+        #print("LCL index:", first_intersection_index)
+        #print("LCL value:", first_intersection_value)
         return first_intersection_index, first_intersection_value
     else:
         print("No LCL found")
