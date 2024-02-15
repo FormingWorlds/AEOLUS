@@ -736,38 +736,37 @@ def general_adiabat( atm ):
             new_p_vol[vol] = atm.vol_list[vol] * atm.ps
             
     if new_psurf != atm.ps:
+        # Backup variables before they are lost
         Tsurf = atm.ts
-        alpha = atm.alpha_cloud
-        toa_heating = atm.toa_heating
-        tmp_magma = atm.tmp_magma
         minT = atm.minT
+        maxT = atm.maxT
         nlev_save = atm.nlev_save
-        skin_d = atm.skin_d
-        skin_k = atm.skin_k
-        effective_radius = atm.effective_radius
-        liquid_water_fraction = atm.liquid_water_fraction
-        cloud_fraction = atm.cloud_fraction
 
+        attrs = {}
+        for a in ["alpha_cloud", "toa_heating", "zenith_angle", "albedo_pl", 
+                    "inst_sf", "skin_k", "skin_d", "tmp_magma", "effective_radius", 
+                    "liquid_water_fraction", "cloud_fraction"]:
+            attrs[a] = getattr(atm,a)
+
+        # Calc new mixing ratios
+        new_vol_list = {}
         for vol in atm.vol_list.keys():
-            atm.vol_list[vol] = new_p_vol[vol] / new_psurf
+           new_vol_list[vol] = new_p_vol[vol] / new_psurf
 
-        atm = atmos(Tsurf, new_psurf, atm.ptop, atm.planet_radius, atm.planet_mass, effective_radius, liquid_water_fraction, cloud_fraction, vol_mixing=atm.vol_list, trppT=atm.trppT, minT=minT, req_levels=nlev_save)
-        
-        atm.alpha_cloud = alpha
-        atm.toa_heating = toa_heating
-        atm.tmp_magma = tmp_magma
-        atm.skin_d = skin_d
-        atm.skin_k = skin_k
-        atm.effective_radius = effective_radius
-        atm.liquid_water_fraction = liquid_water_fraction
-        atm.cloud_fraction = cloud_fraction
-        
-    for vol in atm.vol_list.keys():
-        if atm.vol_list[vol] * atm.ps == p_sat(vol,atm.ts,water_lookup=atm.water_lookup):
-            wet_list.append(vol)
-        elif atm.vol_list[vol] * atm.ps != p_sat(vol,atm.ts,water_lookup=atm.water_lookup) and atm.vol_list[vol] > 0:
-            dry_list.append(vol)
+        # New atmos object
+        atm = atmos(Tsurf, new_psurf, atm.ptop, atm.planet_radius, atm.planet_mass, atm.effective_radius, atm.liquid_water_fraction, atm.cloud_fraction,
+                    vol_mixing=new_vol_list, trppT=atm.trppT, minT=minT, maxT=maxT, req_levels=nlev_save)
+
+        # Restore backed-up variables
+        for a in attrs.keys():
+            setattr(atm,a,attrs[a])
     
+    for vol in atm.vol_list.keys():
+        if np.isclose(atm.vol_list[vol] * atm.ps, p_sat(vol,atm.ts,water_lookup=atm.water_lookup)):
+            wet_list.append(vol)
+        elif atm.vol_list[vol] > 0:
+            dry_list.append(vol)
+
     ### Initialization
     
     # Initialize the tuple solution

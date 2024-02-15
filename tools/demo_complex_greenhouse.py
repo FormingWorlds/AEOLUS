@@ -67,7 +67,7 @@ def run_once(T_surf, dirs):
     atm            = atmos(T_surf, P_surf, P_top, pl_radius, pl_mass, re, lwm, clfr, vol_mixing=vol_mixing, trppT=trppT, do_cloud=do_cloud)
 
     # Compute stellar heating
-    atm.toa_heating = InterpolateStellarLuminosity(star_mass, time, mean_distance, atm.albedo_pl, Sfrac)
+    atm.instellation = InterpolateStellarLuminosity(star_mass, time, mean_distance, atm.albedo_pl, Sfrac)
 
     # Do rad trans
     _, atm_moist = RadConvEqm(dirs, time, atm, standalone=True, cp_dry=False, trppD=trppD, calc_cf=calc_cf, rscatter=rscatter, do_cloud=do_cloud) 

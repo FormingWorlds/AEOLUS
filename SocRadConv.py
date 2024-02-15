@@ -51,33 +51,33 @@ if __name__ == "__main__":
     P_top         = 1.0                  # Pa
 
     # Define volatiles by mole fractions
-    # P_surf       = 100 * 1e5
-    # vol_partial = {}
-    # vol_mixing = { 
-    #                 "CO2"  : 0.00417,
-    #                 "H2O"  : 0.03,
-    #                 "N2"   : 0.78084,
-    #                 "H2"   : 0.03, 
-    #                 "CH4"  : 0.000187, 
-    #                 "O2"   : 0.20946, 
-    #                 "O3"   : 0.0000006, 
-    #                 "He"   : 0.00000524 , 
-    #             }
+    P_surf       =  100 * 1e5
+    vol_partial = {}
+    vol_mixing = { 
+                    "CO2"  : 0.00417,
+                    "H2O"  : 0.03,
+                    "N2"   : 0.78084,
+                    "H2"   : 0.03, 
+                    "CH4"  : 0.000187, 
+                    "O2"   : 0.20946, 
+                    # "O3"   : 0.0000006, 
+                    "He"   : 0.00000524 , 
+                }
     
     # OR:
     # Define volatiles by partial pressures
-    P_surf = 0.0
-    vol_mixing = {}
-    vol_partial = {
-        "H2O" : 0.0354 * 1.0e5, #ga.p_sat('H2O',T_surf), #1e3,
-        "NH3" : 0.,
-        "CO2" : 0.,
-        "CH4" : 0.0,
-        "CO" : 0.,
-        "O2" : 0.0e4,
-        "N2" : 1.0e5,
-        "H2" : 0.0e3
-        }
+    # P_surf = 0.0
+    # vol_mixing = {}
+    # vol_partial = {
+    #     "H2O" : 1.54642e5,
+    #     "NH3" : 0.,
+    #     "CO2" : 6.70820e5,
+    #     "CH4" : 0.,
+    #     "CO" : 129.85989e5,
+    #     "O2" : 0.20e5,
+    #     "N2" : 1.53779e5,
+    #     "H2" : 13.01485e5
+    #     }
 
     # Stellar heating on/off
     stellar_heating = True
@@ -119,6 +119,8 @@ if __name__ == "__main__":
     ##### Function calls
 
     # Set up dirs
+    if os.environ.get('AEOLUS_DIR') == None:
+        raise Exception("Environment variables not set! Have you sourced AEOLUS.env?")
     dirs = {
             "aeolus": os.getenv('AEOLUS_DIR')+"/",
             "output": os.getenv('AEOLUS_DIR')+"/output/"
@@ -135,10 +137,10 @@ if __name__ == "__main__":
 
     # Set stellar heating on or off
     if stellar_heating == False: 
-        atm.toa_heating = 0.
+        atm.instellation = 0.
     else:
-        atm.toa_heating = InterpolateStellarLuminosity(star_mass, time, mean_distance)
-        print("Instellation:", round(atm.toa_heating), "W/m^2")
+        atm.instellation = InterpolateStellarLuminosity(star_mass, time, mean_distance)
+        print("Instellation:", round(atm.instellation), "W/m^2")
 
     # Move/prepare spectral file
     print("Inserting stellar spectrum")

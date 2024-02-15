@@ -74,4 +74,7 @@ def set_stratosphere(atm):
             # Renormalise mu with updated x_gas values 
             atm.mu[idx] += phys.molar_mass[vol] * atm.x_gas[vol][idx]
 
+            # Renormalise mu with updated x_gas values 
+            atm.mu[idx] += phys.molar_mass[vol] * atm.x_gas[vol][idx]
+
     return atm

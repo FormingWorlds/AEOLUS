@@ -21,9 +21,9 @@ import utils.StellarSpectrum as StellarSpectrum
 def run_once(T_surf, dirs):
 
     # Planet 
-    time = { "planet": 0., "star": 4567e+6 } # yr,
+    time = { "planet": 0., "star": 4.5e9 } # yr,
     star_mass     = 1.0                 # M_sun, mass of star
-    mean_distance = 1.0                 # au, orbital distance
+    mean_distance = 0.5                 # au, orbital distance
     pl_radius     = 6.371e6             # m, planet radius
     pl_mass       = 5.972e24            # kg, planet mass
 
@@ -41,26 +41,19 @@ def run_once(T_surf, dirs):
     # Rayleigh scattering on/off
     rscatter = False
 
-    # Compute contribution function
-    calc_cf = False
-
     # Tropopause calculation
-    trppD = False   # Calculate dynamically?
     trppT = 0.0     # Fixed tropopause value if not calculated dynamically
     
-    # Instellation scaling | 1.0 == no scaling
-    Sfrac = 1.0
-
     ##### Function calls
 
     # Create atmosphere object
     atm            = atmos(T_surf, P_surf, P_top, pl_radius, pl_mass, vol_mixing=vol_mixing, trppT=trppT)
 
     # Compute stellar heating
-    atm.toa_heating = InterpolateStellarLuminosity(star_mass, time, mean_distance)
+    atm.instellation = InterpolateStellarLuminosity(star_mass, time, mean_distance)
 
     # Do rad trans
-    _, atm_moist = RadConvEqm(dirs, time, atm, standalone=True, cp_dry=False, trppD=trppD, calc_cf=calc_cf, rscatter=rscatter) 
+    _, atm_moist = RadConvEqm(dirs, time, atm, standalone=True, cp_dry=False, trppD=False, calc_cf=False, rscatter=rscatter) 
 
     return [T_surf, atm_moist.LW_flux_up[0]]
 
@@ -71,6 +64,8 @@ if __name__=='__main__':
     print(" ")
 
     # Set up dirs
+    if os.environ.get('AEOLUS_DIR') == None:
+        raise Exception("Environment variables not set! Have you sourced AEOLUS.env?")
     dirs = {
             "aeolus": os.getenv('AEOLUS_DIR')+"/",
             "output": os.getenv('AEOLUS_DIR')+"/output/"
@@ -95,7 +90,7 @@ if __name__=='__main__':
     print("Running AEOLUS...")
     Ts_arr = []
     OLR_arr = []
-    for Ts in np.linspace(200, 2200, 20):
+    for Ts in np.linspace(200, 2200, 25):
         print("T_surf = %d K" % Ts)
         out = run_once(Ts, dirs)
         Ts_arr.append(out[0])

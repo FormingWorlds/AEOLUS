@@ -10,12 +10,15 @@ Harrison Nicholls (HN)
 """
 
 import pickle as pkl
-from copy import deepcopy
 import scipy.optimize as optimise
 
 from modules.compute_moist_adiabat import compute_moist_adiabat
 from modules.dry_adiabat_timestep import compute_dry_adiabat
 from utils.atmosphere_column import atmos
+from modules.find_tropopause import find_tropopause
+from modules.set_stratosphere import set_stratosphere
+import utils.GeneralAdiabat as ga # Moist adiabat with multiple condensibles
+import utils.socrates as socrates
 
 def RadConvEqm(dirs, time, atm, standalone:bool, cp_dry:bool, trppD:bool, calc_cf:bool, rscatter:bool, do_cloud:bool, 
                pure_steam_adj=False, surf_dt=False, cp_surf=1e5, mix_coeff_atmos=1e6, mix_coeff_surf=1e6):
@@ -106,10 +109,11 @@ def MCPA(dirs, atm, standalone:bool, trppD:bool, rscatter:bool):
     ### Moist/general adiabat
     return compute_moist_adiabat(atm, dirs, standalone, trppD, False, rscatter)
 
-def MCPA_CL(dirs, atm_inp, trppD:bool, rscatter:bool, atm_bc:int=0, T_surf_guess:float=-1, T_surf_max:float=-1, method:int=0):
+def MCPA_CBL(dirs, atm_inp, trppD:bool, rscatter:bool, atm_bc:int=0, T_surf_guess:float=-1, T_surf_max:float=-1, method:int=0):
     """Calculates the temperature profile using the multiple-condensible pseudoadiabat and steps T_surf to conserve energy.
 
-    Prescribes a stratosphere, and also calculates fluxes. Only works when used with PROTEUS
+    Prescribes a stratosphere, and also calculates fluxes. Finds T_surf and fluxes such that the conductive BL conduction
+    equation is satisfied (Fourier's law).
 
     Parameters
     ----------
@@ -133,21 +137,18 @@ def MCPA_CL(dirs, atm_inp, trppD:bool, rscatter:bool, atm_bc:int=0, T_surf_guess
     """
 
     # Store constants
-    alpha =         atm_inp.alpha_cloud
-    toa_heating =   atm_inp.toa_heating
-    minT =          atm_inp.minT
-    inst_sf =       atm_inp.inst_sf
-    maxT =          atm_inp.maxT
-    nlev_save =     atm_inp.nlev_save
-    vol_list =      atm_inp.vol_list
-    pl_m =          atm_inp.planet_mass
-    pl_r =          atm_inp.planet_radius
-    ptop =          atm_inp.ptop
-    psurf =         atm_inp.ps
-    trppT =         atm_inp.trppT
-    skin_k =        atm_inp.skin_k
-    skin_d =        atm_inp.skin_d
-    tmp_magma =     atm_inp.tmp_magma
+    #    Passed into atmos() constructor ...
+    trppT = atm_inp.trppT
+    minT = atm_inp.minT; maxT = atm_inp.maxT
+    Psurf = atm_inp.ps; ptop = atm_inp.ptop
+    pl_r = atm_inp.planet_radius; pl_m = atm_inp.planet_mass
+    vol_list = atm_inp.vol_list
+    nlev_save = atm_inp.nlev_save
+    #    Passed later ...
+    attrs = {}
+    for a in ["alpha_cloud", "instellation", "zenith_angle", "albedo_pl", 
+                "inst_sf", "skin_k", "skin_d", "tmp_magma"]:
+        attrs[a] = getattr(atm_inp,a)
 
     # Calculate conductive flux for a given atmos object 'a'
     def skin(a):
@@ -155,20 +156,35 @@ def MCPA_CL(dirs, atm_inp, trppD:bool, rscatter:bool, atm_bc:int=0, T_surf_guess
     
     # Initialise a new atmos object
     def ini_atm(Ts):
-        _a = atmos(Ts, psurf, ptop, pl_r, pl_m , vol_mixing=vol_list, trppT=trppT, minT=minT, maxT=maxT, req_levels=nlev_save)
-        _a.toa_heating = toa_heating
-        _a.inst_sf = inst_sf
-        _a.alpha_cloud = alpha
-        _a.skin_k = skin_k
-        _a.skin_d = skin_d 
-        _a.tmp_magma = tmp_magma
-        return _a
+        _atm = atmos(Ts, Psurf, ptop, 
+                   pl_r, pl_m, 
+                   vol_mixing=vol_list, trppT=trppT, 
+                   minT=minT, maxT=maxT, 
+                   req_levels=nlev_save)
+        for a in attrs.keys():
+            setattr(_atm,a,attrs[a])
+        return _atm
     
     # We want to optimise this function (returns residual of F_atm and F_skn, given T_surf)
     def func(x):
 
         print("Evaluating at T_surf = %.1f K" % x)
-        atm_tmp = compute_moist_adiabat(ini_atm(x), dirs, False, trppD, False, rscatter)
+        atm_tmp = ga.general_adiabat(ini_atm(x))
+
+        # Calculate tropopause
+        if (trppD == True) or (atm_tmp.trppT > atm_tmp.minT):
+
+            if trppD:
+                atm_tmp = socrates.radCompSoc(atm_tmp, dirs, recalc=False, calc_cf=False, rscatter=rscatter)
+        
+            # Find tropopause index
+            atm_tmp = find_tropopause(atm_tmp,trppD, verbose=False)
+
+            # Reset stratosphere temperature and abundance levels
+            atm_tmp = set_stratosphere(atm_tmp)
+
+        # Calculate final fluxes from T(p)
+        atm_tmp = socrates.radCompSoc(atm_tmp, dirs, recalc=True, calc_cf=False, rscatter=rscatter)
 
         if atm_bc == 0:
             F_atm = atm_tmp.net_flux[0]  
@@ -181,16 +197,16 @@ def MCPA_CL(dirs, atm_inp, trppD:bool, rscatter:bool, atm_bc:int=0, T_surf_guess
         del atm_tmp
         return float(F_skn - F_atm)
     
-    print("Solving for global energy balance with conductive lid (T_magma = %.1f K)" % tmp_magma)
+    print("Solving for global energy balance with conductive lid (T_magma = %.1f K)" % attrs["tmp_magma"])
 
     # Use an 'initial guess' method
     if method == 0:
         x0 = atm_inp.ts          # guess 1
         if T_surf_guess < minT:  # guess 2 (if not disabled)
-            x1 = tmp_magma * 0.8
+            x1 = attrs["tmp_magma"] * 0.8
         else:
             x1 = T_surf_guess
-        r = optimise.root_scalar(func, method='secant', x0=x0, x1=x1, xtol=1e-3, maxiter=20)
+        r = optimise.root_scalar(func, method='secant', x0=x0, x1=x1, xtol=1e-5, maxiter=20)
 
     # Use a 'bracketing' method
     elif method == 1:

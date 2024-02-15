@@ -120,7 +120,8 @@ def radCompSoc(atm, dirs, recalc, calc_cf=False, rscatter=False,
     if check_cfg(fthis): nctools.ncout2d(   fthis, 0, 0, float(atm.zenith_angle), 'szen', longname="Solar zenith angle", units='Degrees')
     
     fthis = basename+'.stoa'
-    toah = atm.toa_heating * (1.0 - atm.albedo_pl) * atm.inst_sf
+    toah = atm.instellation * (1.0 - atm.albedo_pl) * atm.inst_sf  # Values passed to socrates should not include cos(theta), since it's applied during the RT
+    atm.toa_heating = toah * np.cos(atm.zenith_angle * np.pi / 180.0)
     if check_cfg(fthis): nctools.ncout2d(   fthis, 0, 0, toah, 'stoa', longname="Solar Irradiance at TOA", units='WM-2')
 
     # T, P + volatiles
@@ -156,7 +157,8 @@ def radCompSoc(atm, dirs, recalc, calc_cf=False, rscatter=False,
             vol_lower = str(vol).lower()
             fthis = basename+'.'+vol_lower
             if check_gas(fthis):
-                nctools.ncout3d(basename+'.'+vol_lower, 0, 0, atm.p,  phys.molar_mass[vol] / atm.mu * atm.x_gas[vol], vol_lower, longname=vol, units='kg/kg') 
+                x_gas_this = phys.molar_mass[vol] / atm.mu * atm.x_gas[vol]
+                nctools.ncout3d(basename+'.'+vol_lower, 0, 0, atm.p,  x_gas_this, vol_lower, longname=vol, units='kg/kg') 
 
     # Call sequences for run SOCRATES + move data
     if do_cloud:
@@ -319,9 +321,6 @@ def radCompSoc(atm, dirs, recalc, calc_cf=False, rscatter=False,
     if calc_cf == True:
         ncfile11.close()
         # ncfile12.close()
-
-    # Remove auxiliary files
-    # CleanOutputDir( os.getcwd() )
 
     return atm
 
