@@ -6,6 +6,7 @@ import netCDF4 as nc
 from utils import phys
 from utils.height import AtmosphericHeight
 import os, copy, platform
+import pwd
 
 class atmos:
     
@@ -306,7 +307,14 @@ class atmos:
         ds = nc.Dataset(fpath, 'w', format='NETCDF4')
         ds.description        = 'AEOLUS atmosphere data'
         ds.hostname           = str(platform.node())
-        ds.username           = str(os.getlogin())
+        try:
+            # Try to get the login using os.getlogin()
+            username = os.getlogin()
+        except OSError:
+            # If os.getlogin() fails, try an alternative method
+            username = pwd.getpwuid(os.getuid()).pw_name
+        ds.username = str(username)
+
         ds.AEOLUS_version     = "0.1"
         ds.SOCRATES_version   = "2306"
         ds.platform           = str(platform.system())
@@ -331,11 +339,9 @@ class atmos:
         # Scalar quantities  
         #    Create variables
         var_tstar =     ds.createVariable('tstar',      'f4');  var_tstar.units = "K"       # BOA LW BC
-        var_toah =      ds.createVariable('toa_heating','f4');  var_toah.units = "W m-2"    # TOA SW BC
         var_ps =        ds.createVariable('ps',         'f4');  var_ps.units = "Pa"
         var_ptop =      ds.createVariable('ptop',       'f4');  var_ptop.units = "Pa" 
         var_trppP =     ds.createVariable('trppP',      'f4');  var_trppP.units = "Pa" 
-        var_tstar =     ds.createVariable('tstar',         'f4');  var_tstar.units = "K"     # BOA LW BC
         var_inst =      ds.createVariable("instellation",  'f4');  var_inst.units = "W m-2"  # Solar flux at TOA
         var_s0fact =    ds.createVariable("inst_factor",   'f4');                            # Scale factor applied to instellation
         var_znth =      ds.createVariable("zenith_angle",  'f4');  var_znth.units = "deg"    # Scale factor applied to instellation
@@ -425,6 +431,7 @@ class atmos:
         var_cmr[:] =    np.array([ [ self.x_cond[gas][i] for i in range(nlev_c-1,-1,-1) ] for gas in gas_list  ]).T
         var_pvol[:] =   np.array([ [ self.p_vol[gas][i] for i in range(nlev_c-1,-1,-1) ] for gas in gas_list  ]).T
         var_plvol[:] = np.array([ [ self.pl_vol[gas][i] for i in range(nlev_l-1,-1,-1) ] for gas in gas_list  ]).T
+        
         var_fdl[:] =    self.LW_flux_down[:]
         var_ful[:] =    self.LW_flux_up[:]
         var_fnl[:] =    self.LW_flux_net[:]

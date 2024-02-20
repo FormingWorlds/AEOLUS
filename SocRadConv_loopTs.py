@@ -23,6 +23,7 @@ from scipy.optimize import brentq
 
 from modules.stellar_luminosity import InterpolateStellarLuminosity
 from modules.solve_pt import RadConvEqm
+from modules.solve_pt import *
 from modules.plot_flux_balance import plot_fluxes
 from modules.relative_humidity import compute_Rh
 
@@ -32,6 +33,59 @@ from utils.atmosphere_column import atmos
 import utils.StellarSpectrum as StellarSpectrum
 
 import utils.phys as phys
+
+####################################
+##### Global constants
+####################################
+
+# AU definition [m]
+AU = 149597870700.
+# Universal gravitational constant [m^3.kg^-1.s^-2]
+G_universal = 6.67430e-11
+# Universal gas constant [J.mol^-1.K^-1]
+R = 8.31446261815324 
+# Number of seconds in a day
+day_s = 24.0*3600.0
+
+####################################
+##### Sun/Earth parameters
+####################################
+
+L_Sun        = 3.828e26    # Solar luminosity [W]
+M_Sun        = 1.988500e30 # Solar mass [kg]
+radius_Earth = 6.371e6     # Earth radius [m]
+mass_Earth   = 5.9722e24   # Earth mass [kg]
+grav_Earth   = 9.807       # Earth surface gravity [m.s^-2]
+
+def surface_gravity(mass,radius):
+	g = G_universal*np.array(mass)*mass_Earth/(np.array(radius)*radius_Earth)**2
+	if g.ndim > 0:
+		g = np.sort(g)
+	return g
+
+def angular_velocity(orbital_period):
+	return 2.0*np.pi/(orbital_period*day_s)
+
+# Sources: TRAPPIST-1: doi:10.3847/psj/abd022 ; Proxima-b: doi:10.3847/2041-8205/831/2/l16 (Figure 2) ; Teegarden: doi:10.1051/0004-6361/201935460 (Figure 12). 
+planets = { 'Earth': {'Stellar Mass': M_Sun, 'Stellar Luminosity': L_Sun, 'Radius': radius_Earth, 'Gravity': grav_Earth, 'Semi-major axis': AU, 'Angular velocity': angular_velocity(1.0)},
+            'TRAPPIST-1b': {'Stellar Mass': 0.0898*M_Sun, 'Stellar Luminosity': 0.000553*L_Sun, 'Radius': 1.116*radius_Earth, 'Gravity': 1.102*grav_Earth, 'Semi-major axis': 0.01154*AU, 'Angular velocity': angular_velocity(1.510826)},
+			'TRAPPIST-1d': {'Stellar Mass': 0.0898*M_Sun, 'Stellar Luminosity': 0.000553*L_Sun, 'Radius': 0.788*radius_Earth, 'Gravity': 0.624*grav_Earth, 'Semi-major axis': 0.02227*AU, 'Angular velocity': angular_velocity(4.049219)},
+			'TRAPPIST-1e': {'Stellar Mass': 0.0898*M_Sun, 'Stellar Luminosity': 0.000553*L_Sun, 'Radius': 0.920*radius_Earth, 'Gravity': 0.817*grav_Earth, 'Semi-major axis': 0.02925*AU, 'Angular velocity': angular_velocity(6.101013)},
+			'Proxima-b':   {'Stellar Mass': 0.1221*M_Sun, 'Stellar Luminosity': 0.001567*L_Sun, 'Radius': np.array([0.94,1.4])*radius_Earth, 'Gravity': surface_gravity(1.07,[0.94,1.4]), 'Semi-major axis': 0.04856*AU, 'Angular velocity': angular_velocity(11.1868)},
+			'Teegarden-b':   {'Stellar Mass': 0.09455120*M_Sun, 'Stellar Luminosity': 0.00073*L_Sun, 'Radius': 1.02*radius_Earth, 'Mass': 1.05*mass_Earth, 'Gravity': surface_gravity(1.05,1.02), 'Semi-major axis': 0.0252*AU, 'Angular velocity': angular_velocity(4.9100)},
+			'Teegarden-c':   {'Stellar Mass': 0.09455120*M_Sun, 'Stellar Luminosity': 0.00073*L_Sun, 'Radius': 1.04*radius_Earth, 'Mass': 1.11*mass_Earth, 'Gravity': surface_gravity(1.11,1.04), 'Semi-major axis': 0.0443*AU, 'Angular velocity': angular_velocity(11.409)}}
+
+atmospheres = { 'Earth': {'H2O': 1e-3, 'CO2': 3.50e-4, 'O3': 0.07e-6, 'N2O': 0.31e-6, 'CO': 0.10e-6, 'CH4': 1.70e-6, 'O2': 0.20947, 'NO': 0.0, 'SO2': 0.0, 'NO2': 0.02e-6, 'NH3': 1.0e-7, 'HNO3': 0.0, 'N2': 0.78084, 'H2': 0.53e-6, 'He': 5.24e-6, 'OCS': 0.0},
+                'Pure Steam': {'H2O': 1.0, 'CO2': 0.0, 'O3': 0.0, 'N2O': 0.0, 'CO': 0.0, 'CH4': 0.0, 'O2': 0.0, 'NO': 0.0, 'SO2': 0.0, 'NO2': 0.0, 'NH3': 0.0, 'HNO3': 0.0, 'N2': 0.0, 'H2': 0.0, 'He': 0.0, 'OCS': 0.0}}
+
+molecules = {'Molecular Weight': {'H2O': 0.018, 'CO2': 0.044, 'O3': 0.048, 'N2O': 0.044, 'CO': 0.028, 'CH4': 0.016, 'O2': 0.032, 'NO': 0.030, 'SO2': 0.064, 'NO2': 0.046, 'NH3': 0.017, 'HNO3': 0.063, 'N2': 0.028, 'H2': 0.002, 'He': 0.004, 'OCS': 0.060},
+			 'Isobaric Heat Capacity': {'H2O': 1864.0, 'CO2': 849.0, 'O3': 819.375, 'N2O': 877.364, 'CO': 1040.0, 'CH4': 2232.0, 'O2': 918.0, 'NO': 995.0, 'SO2': 624.0625, 'NO2': 805.0, 'NH3': 2175.0, 'HNO3': 849.365, 'N2': 1040.0, 'H2': 14310.0, 'He': 5197.5, 'OCS': 41.592}}
+
+molecular_weights = list(molecules['Molecular Weight'].values())
+heat_capacities   = list(molecules['Isobaric Heat Capacity'].values())
+
+planet     = 'Teegarden-b'
+atmosphere = 'Earth'
 
 ####################################
 ##### Stand-alone initial conditions
@@ -45,13 +99,13 @@ if __name__ == "__main__":
 
     # Planet 
     time = { "planet": 0., "star": 4e+9 } # yr,
-    star_mass     = 0.1*1.0                 # M_sun, mass of star
-    mean_distance = 0.0252*1.0              # au, orbital distance
-    pl_radius     = 1.1*6.371e6             # m, planet radius
-    pl_mass       = 1.05*5.972e24           # kg, planet mass
+    star_mass     = max(0.1,planets[planet]['Stellar Mass']/M_Sun)*1.0 # M_sun, mass of star. Minimum supported is 0.1.
+    mean_distance = planets[planet]['Semi-major axis']/AU * 1.0        # au, orbital distance
+    pl_radius     = planets[planet]['Radius']                          # m, planet radius
+    pl_mass       = planets[planet]['Mass']                            # kg, planet mass
 
     # Boundary conditions for pressure & temperature
-    T_surf        = 650.0                # K
+    T_surf        = 300.0                # K
     P_top         = 1.0                  # Pa
 
     # Stellar heating on/off
@@ -139,13 +193,15 @@ if __name__ == "__main__":
         atm = atmos(T_surf, P_surf, P_top, pl_radius, pl_mass, re, lwm, clfr,
                     vol_mixing=vol_mixing, vol_partial=vol_partial, calc_cf=calc_cf, trppT=trppT, req_levels=100, water_lookup=water_lookup, do_cloud=do_cloud)
 
-
+        if os.environ.get('AEOLUS_DIR') == None:
+            raise Exception("Environment variables not set! Have you sourced AEOLUS.env?")
+    
         # Set stellar heating on or off
         if stellar_heating == False: 
-            atm.toa_heating = 0.
+            atm.instellation = 0.
         else:
-            atm.toa_heating = InterpolateStellarLuminosity(star_mass, time, mean_distance)
-            print("Instellation:", round(atm.toa_heating), "W/m^2")
+            atm.instellation = InterpolateStellarLuminosity(star_mass, time, mean_distance)
+            print("Instellation:", round(atm.instellation), "W/m^2")
 
         # Move/prepare spectral file
         print("Inserting stellar spectrum")
@@ -277,18 +333,18 @@ if __name__ == "__main__":
             # ------------------- Day side -------------------
             dirs = {
                     "aeolus": os.getenv('AEOLUS_DIR')+"/",
-                    "output": os.getenv('AEOLUS_DIR')+f"/200_to_3000_K_full_condensate_retention_cloudy_99_9999/output_day_{int(temperature)}K/"
+                    "output": os.getenv('AEOLUS_DIR')+f"/post_stratosphere_fix/200_to_3000_K_full_condensate_retention_clear_sky/output_day_{int(temperature)}K/"
                     }
             
             # Tidy directory
             if os.path.exists(dirs["output"]):
                 shutil.rmtree(dirs["output"])
-            os.mkdir(dirs["output"])
+            os.makedirs(dirs["output"])
 
             # Set up the dayside cloud
             re   = 1.0e-5 
             lwm  = 0.8   
-            clfr = 0.999999
+            clfr = 0.0
 
             print("index, temperature = ", i, temperature)
             stellar_heating = True
@@ -307,12 +363,12 @@ if __name__ == "__main__":
             # ------------------- Night side -------------------
             dirs = {
             "aeolus": os.getenv('AEOLUS_DIR')+"/",
-            "output": os.getenv('AEOLUS_DIR')+f"/200_to_3000_K_full_condensate_retention_cloudy_99_9999/output_night_{int(temperature)}K/"
+            "output": os.getenv('AEOLUS_DIR')+f"/post_stratosphere_fix/200_to_3000_K_full_condensate_retention_clear_sky/output_night_{int(temperature)}K/"
             }
             
             if os.path.exists(dirs["output"]):
                 shutil.rmtree(dirs["output"])
-            os.mkdir(dirs["output"])
+            os.makedirs(dirs["output"])
 
             # Set up the nightside cloud
             re   = 1.0e-5 
