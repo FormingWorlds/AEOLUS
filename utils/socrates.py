@@ -168,9 +168,9 @@ def radCompSoc(atm, dirs, recalc, calc_cf=False, rscatter=False,
         seq_lw_ex = ["Cl_run_cdf","-B", basename,"-s", spectral_file, "-R 1", str(atm.nbands), " -ch ", str(atm.nbands), " -I -g 2 -C ", str(atm.cloud_scheme), " -K ", str(atm.cloud_representation), " -d ", str(atm.droplet_type), " -v ", str(atm.solver), " -u", scatter_flag, " -o"]
         seq_lw_mv = ["fmove", basename,"currentlw"]
         
-        if calc_cf == True:
-            seq8 = ("Cl_run_cdf -B", basename,"-s", spectral_file, "-R 1 ", str(atm.nbands), " -ch ", str(atm.nbands), " -I -g 2 -C 5", str(atm.cloud_scheme), " -K ", str(atm.cloud_representation), " -d ", str(atm.droplet_type), " -v ", str(atm.solver), " -u -ch 1", scatter_flag, " -o")
-            seq9 = ("fmove", basename, "currentlw_cff")
+        #if calc_cf == True:
+        #seq8 = ("Cl_run_cdf -B", basename,"-s", spectral_file, "-R 1 ", str(atm.nbands), " -ch ", str(atm.nbands), " -I -g 2 -C ", str(atm.cloud_scheme), " -K ", str(atm.cloud_representation), " -d ", str(atm.droplet_type), " -v ", str(atm.solver), " -u -ch 1", scatter_flag, " -o")
+        #seq9 = ("fmove", basename, "currentlw_cff")
             
     else: # cloud flags require Block 10
         seq_sw_ex = ["Cl_run_cdf","-B", basename,"-s", spectral_file, "-R 1", str(atm.nbands), " -ch ", str(atm.nbands), " -S -g 2 -C 5 -u", scatter_flag, " -o"]
@@ -227,9 +227,9 @@ def radCompSoc(atm, dirs, recalc, calc_cf=False, rscatter=False,
     subprocess.run(seq_lw_ex,check=True,stderr=outhandle,stdout=outhandle)
     subprocess.run(seq_lw_mv,check=True,stderr=outhandle,stdout=outhandle)
 
-    if calc_cf == True:
-        subprocess.run(list(seq8),check=True,stderr=outhandle,stdout=outhandle)
-        subprocess.run(list(seq9),check=True,stderr=outhandle,stdout=outhandle)
+    #if calc_cf == True:
+    #subprocess.run(list(seq8),check=True,stderr=outhandle,stdout=outhandle)
+    #subprocess.run(list(seq9),check=True,stderr=outhandle,stdout=outhandle)
 
 
     # Open netCDF files produced by SOCRATES
@@ -243,9 +243,9 @@ def radCompSoc(atm, dirs, recalc, calc_cf=False, rscatter=False,
     ncfile9  = net.Dataset('currentlw.uflx')  # upward
     ncfile10 = net.Dataset('currentlw.hrts')  # heating rate
 
-    if calc_cf == True:
-        ncfile11 = net.Dataset('currentlw_cff.cff')
-        ncfile12 = net.Dataset('currentlw.cff')
+    #if calc_cf == True:
+    #ncfile11 = net.Dataset('currentlw_cff.cff')
+    ncfile12 = net.Dataset('currentlw.cff')
 
     # Loop through netCDF variables and populate arrays
     vflxsw   = ncfile1.variables['vflx']  # SW downward flux (direct + diffuse)
@@ -255,9 +255,9 @@ def radCompSoc(atm, dirs, recalc, calc_cf=False, rscatter=False,
     uflxlw   = ncfile9.variables['uflx']  # LW upward flux 
     hrtslw   = ncfile10.variables['hrts'] # LW heating rate (K/day)
 
-    if calc_cf == True:
-        cff    = ncfile11.variables['cff'] # Contribution function (flux, sum)
-        cff_i  = ncfile12.variables['cff'] # Contribution function (channel, plev, lat, lon)
+    #if calc_cf == True:
+    #cff    = ncfile11.variables['cff'] # Contribution function (flux, sum)
+    cff_i  = ncfile12.variables['cff'] # Contribution function (channel, plev, lat, lon)
 
     ##### Fluxes
 
@@ -303,11 +303,11 @@ def radCompSoc(atm, dirs, recalc, calc_cf=False, rscatter=False,
             atm.net_heating       = np.array(list(atm.net_heating))
     
     ### Contribution function
-    if calc_cf == True:
-        # print(cff)
-        atm.cff     = cff[:,0,0]
-        atm.cff_i   = cff_i[:,:,0,0]
-        atm.LW_flux_up_i = uflxlw[:,:,0,0]
+    #if calc_cf == True:
+    # print(cff)
+    #atm.cff     = cff[:,0,0]
+    atm.cff_i   = cff_i[:,:,0,0]
+    atm.LW_flux_up_i = uflxlw[:,:,0,0]
 
     # Close netCDF files
     ncfile1.close()
@@ -319,8 +319,8 @@ def radCompSoc(atm, dirs, recalc, calc_cf=False, rscatter=False,
     ncfile9.close()
     ncfile10.close()
     if calc_cf == True:
-        ncfile11.close()
-        # ncfile12.close()
+        #ncfile11.close()
+        ncfile12.close()
 
     return atm
 

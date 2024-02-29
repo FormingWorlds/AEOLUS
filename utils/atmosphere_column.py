@@ -210,10 +210,10 @@ class atmos:
         self.heat                   = np.zeros(self.nlev)               # K/day from *
 
         # Contribution function arrays
-        if calc_cf == True:
-            self.cff 					= np.zeros(self.nlev) 				# normalised
-            self.cff_i					= np.zeros([self.nbands,self.nlev]) # cf per band
-            self.LW_flux_up_i 			= np.zeros([self.nbands,self.nlev])
+        #if calc_cf == True:
+        #self.cff 					= np.zeros(self.nlev) 				# normalised
+        self.cff_i					= np.zeros([self.nbands,self.nlev]) # cf per band
+        self.LW_flux_up_i 			= np.zeros([self.nbands,self.nlev])
 
         # Cloud flags (socrates/bin/rad_pcf.f90) and input arrays
         if do_cloud == True:            
@@ -408,6 +408,7 @@ class atmos:
         var_hr =        ds.createVariable('rad_hr',  'f4', dimensions=('nlev_c'));           var_hr.units = "K day-1"
         var_sful =      ds.createVariable('Sfl_U_LW','f4', dimensions=('nbands', 'nlev_l')); var_sful.units = "W m-2 m-1"
         var_sfus =      ds.createVariable('Sfl_U_SW','f4', dimensions=('nbands', 'nlev_l')); var_sfus.units = "W m-2 m-1"
+        var_cff_i =       ds.createVariable('cff_i',     'f4', dimensions=('nbands', 'nlev_c')); var_cff_i.units = "W m-2 m-1"
 
         var_re =        ds.createVariable('re',      'f4', dimensions=('nlev_c'));           var_re.units = "m"
         var_lwm =       ds.createVariable('lwm',     'f4', dimensions=('nlev_c'));           var_lwm.units = "kg kg-1"
@@ -448,6 +449,7 @@ class atmos:
 
         var_sful[:,:] = self.LW_spectral_flux_up[:,:]
         var_sfus[:,:] = self.SW_spectral_flux_up[:,:]
+        var_cff_i[:,:]  = self.cff_i[:,:]
 
         var_re[:]   =   self.re[:]
         var_lwm[:]  =   self.lwm[:]

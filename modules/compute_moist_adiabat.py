@@ -14,6 +14,7 @@ from modules.find_tropopause import find_tropopause
 from modules.set_stratosphere import set_stratosphere
 from modules.water_cloud import simple_cloud
 from modules.relative_humidity import compute_Rh, update_for_constant_RH
+from modules.make_inversion import inversion
 
 import utils.GeneralAdiabat as ga # Moist adiabat with multiple condensibles
 import utils.socrates as socrates
@@ -44,6 +45,21 @@ def compute_moist_adiabat(atm, dirs, standalone, trppD, calc_cf=False, rscatter=
     
     atm_moist = ga.general_adiabat(atm_moist) # Build initial general adiabat structure
 
+    if atm_moist.instellation == 0.: # create an inversion on the nightside
+        # Read dayside arrays
+        data = np.loadtxt('dayside.txt')
+        data_l = np.loadtxt('dayside_l.txt')
+        tmp_day  = data[:, 0] 
+        tmpl_day = data_l[:, 0] 
+        p_day    = data[:, 1]  
+        pl_day   = data_l[:, 1]
+        ts_night = np.loadtxt('ts_night.txt')
+        atm_moist.tmp = inversion(tmp_day, atm_moist.ts, ts_night, p_day, atm_moist.p, True)
+        atm_moist.tmpl = inversion(tmpl_day, atm_moist.ts, ts_night, pl_day, atm_moist.pl, True)
+    else:
+        np.savetxt('dayside.txt', np.column_stack((atm_moist.tmp, atm_moist.p)))  # save the dayside TP to use on the nightside.
+        np.savetxt('dayside_l.txt', np.column_stack((atm_moist.tmpl, atm_moist.pl)))
+    
     atm_moist.rh = compute_Rh(atm_moist)
 
     if do_cloud:

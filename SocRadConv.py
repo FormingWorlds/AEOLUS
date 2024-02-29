@@ -86,7 +86,7 @@ if __name__ == "__main__":
     rscatter = True
 
     # Compute contribution function
-    calc_cf = False
+    calc_cf = True
 
     # Pure steam convective adjustment
     pure_steam_adj = False

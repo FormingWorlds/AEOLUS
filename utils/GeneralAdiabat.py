@@ -743,7 +743,7 @@ def general_adiabat( atm ):
         nlev_save = atm.nlev_save
 
         attrs = {}
-        for a in ["alpha_cloud", "toa_heating", "zenith_angle", "albedo_pl", 
+        for a in ["alpha_cloud", "instellation", "zenith_angle", "albedo_pl", 
                     "inst_sf", "skin_k", "skin_d", "tmp_magma", "effective_radius", 
                     "liquid_water_fraction", "cloud_fraction"]:
             attrs[a] = getattr(atm,a)
