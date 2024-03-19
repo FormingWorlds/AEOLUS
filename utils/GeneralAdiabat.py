@@ -38,6 +38,7 @@ vol_colors = {
     "H2"             : [mpl.colormaps["Greens"](i) for i in np.linspace(0,1.0,no_colors)],
     "N2"             : [mpl.colormaps["Purples"](i) for i in np.linspace(0,1.0,no_colors)],
     "O2"             : [mpl.colormaps["Wistia"](i) for i in np.linspace(0,1.0,no_colors+2)],
+    "O3"             : [mpl.colormaps["cool"](i) for i in np.linspace(0,1.0,no_colors+2)],
     "CH4"            : [mpl.colormaps["RdPu"](i) for i in np.linspace(0,1.0,no_colors)],
     "CO"             : [mpl.colormaps["pink_r"](i) for i in np.linspace(0,1.0,no_colors)],
     "S"              : [mpl.colormaps["YlOrBr"](i) for i in np.linspace(0,1.0,no_colors)],
@@ -97,6 +98,7 @@ vol_latex = {
     "N2"      : r"N$_2$",
     "S"       : r"S",
     "O2"      : r"O$_2$",
+    "O3"      : r"O$_3$",
     "He"      : r"He",
     "NH3"     : r"NH$_3$",
     "H2O-CO2" : r"H$_2$O–CO$_2$",
@@ -210,6 +212,8 @@ def p_sat(switch,T, water_lookup=False):
             e = phys.satvps_function(phys.n2)
         case 'O2':
             e = phys.satvps_function(phys.o2)
+        case 'O3':
+            e = phys.satvps_function(phys.o3)
         case 'H2':
             e = phys.satvps_function(phys.h2)
         case 'He':
@@ -273,6 +277,11 @@ def Tdew(switch, p):
         pref = p_sat('O2',Tref)
         L_O2=phys.O2.L_vaporization*phys.o2.MolecularWeight*1e-3
         return Tref/(1.-(Tref*phys.R_gas/L_O2)*math.log(p/pref))
+    if switch == 'O3':
+        Tref = 161.85 # K, arbitrary point (161.85K,esat(161.85K)=1.013bar) on the coexistence curve of O3 
+        pref = p_sat('O3',Tref)
+        L_O3=phys.O3.L_vaporization*phys.o3.MolecularWeight*1e-3
+        return Tref/(1.-(Tref*phys.R_gas/L_O3)*math.log(p/pref))
     if switch == 'H2':
         Tref = 23.15 # K, arbitrary point (23.15K,esat(23.15K)=1.7bar) on the coexistence curve of H2 
         pref = p_sat('H2',Tref)
@@ -319,6 +328,8 @@ def get_T_crit(switch):
             return phys.N2.CriticalPointT
         case 'O2':
             return phys.O2.CriticalPointT
+        case 'O3':
+            return phys.O3.CriticalPointT
         case 'H2':
             return phys.H2.CriticalPointT
         case 'He':
@@ -377,6 +388,13 @@ def L_heat(switch, T, water_lookup=False):
             MolecularWeight = phys.O2.MolecularWeight
             T_triple        = phys.O2.TriplePointT
             T_crit          = phys.O2.CriticalPointT
+
+        case 'O3':
+            L_sublimation   = phys.O3.L_sublimation # No O3 sublimation
+            L_vaporization  = phys.O3.L_vaporization # No triple point L_vap
+            MolecularWeight = phys.O3.MolecularWeight
+            T_triple        = phys.O3.TriplePointT
+            T_crit          = phys.O3.CriticalPointT
         
         case 'H2':
             L_sublimation   = phys.H2.L_vaporization # No H2 sublimation
@@ -991,9 +1009,10 @@ if __name__ == "__main__":
     pN2                     = 3e+5                          # Pa
     pCH4                    = 0.                            # Pa
     pO2                     = 0.                            # Pa
+    pO3                     = 0.                            # Pa
     pHe                     = 0.                            # Pa
     pNH3                    = 0.                            # Pa
-    P_surf                  = pH2O + pCO2 + pH2 + pN2 + pCH4 + pO2 + pHe + pNH3  # Pa
+    P_surf                  = pH2O + pCO2 + pH2 + pN2 + pCH4 + pO2 + pO3 + pHe + pNH3  # Pa
 
     # Set fraction of condensate retained in column (0 = full rainout)
     alpha_cloud             = 0.0
@@ -1016,6 +1035,7 @@ if __name__ == "__main__":
                   "N2"  : pN2  / P_surf,
                   "CH4" : pCH4 / P_surf,
                   "O2"  : pO2  / P_surf,
+                  "O3"  : pO3  / P_surf,
                   "CO"  : pN2  / P_surf,
                   "He"  : pHe  / P_surf,
                   "NH3" : pNH3 / P_surf,

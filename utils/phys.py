@@ -336,6 +336,26 @@ O2.formula = 'O2'
 O2.L_vaporization=2.420000e+05
 O2.rho_liquid=1.307000e+03
 #------------------------
+O3 = gas() # https://encyclopedia.airliquide.com/ozone#properties
+O3.CriticalPointT = 2.61e+02  
+O3.CriticalPointP = 5.57e6
+O3.TriplePointT = 8.015e+01  
+O3.TriplePointP = 7.346e-01
+O3.L_vaporization_BoilingPoint = 2.8849e+05   
+O3.L_vaporization_TriplePoint = None # left to find
+O3.L_fusion = 4.1668e+04
+O3.L_sublimation = 0.1e-99 # !CAREFUL! Actually: None
+O3.rho_liquid_BoilingPoint = 1.34908e+03
+O3.rho_liquid_TriplePoint = None # left to find
+O3.rho_solid = 1.351000e+03 # left to find
+O3.cp = 8.197165e+02 # https://webbook.nist.gov/cgi/cbook.cgi?ID=C10028156&Mask=1&Type=JANAFG&Table=on#JANAFG
+O3.gamma = 1.393000e+00  # left to find cv
+O3.MolecularWeight = 4.798e+01
+O3.name = 'Ozone' 
+O3.formula = 'O3' 
+O3.L_vaporization=2.8849e+05 # left to find L_vaporization_TriplePoint
+O3.rho_liquid=1.34908e+03
+#------------------------
 H2 = gas()
 H2.CriticalPointT = 3.320000e+01
 H2.CriticalPointP = 1.298000e+06
@@ -405,6 +425,7 @@ co2     = CO2
 co      = CO
 n2      = N2
 o2      = O2
+o3      = O3
 h2      = H2
 he      = He
 nh3     = NH3
