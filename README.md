@@ -1,3 +1,5 @@
+## WARNING: This repository is deprecated. Code development is continued in https://github.com/FormingWorlds/JANUS
+
 ## AEOLUS (temperature structure generator)
 
 Generates a temperature profile using the generalised moist pseudoadiabat and a prescribed stratosphere. Calculates radiative fluxes using SOCRATES.
